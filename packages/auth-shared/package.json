@@ -1,0 +1,40 @@
+{
+  "name": "@tradex/auth-shared",
+  "version": "1.0.0",
+  "description": "Shared authentication utilities for Trade-X microservices",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/passport": "^10.0.3",
+    "@tradex/shared-types": "^1.0.0",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/passport-jwt": "^4.0.1",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "auth",
+    "jwt",
+    "bcrypt",
+    "nestjs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

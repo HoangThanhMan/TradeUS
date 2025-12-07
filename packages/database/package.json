@@ -1,0 +1,25 @@
+{
+  "name": "@tradex/database",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/mongoose": "^11.0.3",
+    "@tradex/shared-types": "^1.0.0",
+    "ioredis": "^5.8.2",
+    "mongoose": "^8.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.9.3"
+  }
+}
