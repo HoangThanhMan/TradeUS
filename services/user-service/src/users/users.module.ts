@@ -19,6 +19,6 @@ import { UsersRepository } from './users.repository';
       useFactory: () => new PasswordService(10), // 10 is salt rounds
     },
   ],
-  exports: [UsersService, UsersRepository],
+  exports: [UsersService, UsersRepository, PasswordService],
 })
 export class UsersModule {}
