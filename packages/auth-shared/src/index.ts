@@ -8,6 +8,7 @@ export * from './services/password.service';
 // Guards
 export * from './guards/jwt-auth.guard';
 export * from './guards/roles.guard';
+export * from './guards/local-auth.guard';
 
 // Decorators
 export * from './decorators/current-user.decorator';
