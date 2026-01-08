@@ -26,11 +26,16 @@ export class ProxyService {
     private readonly configService: ConfigService,
   ) {
     this.serviceUrls = {
-      [ServiceName.USER]: this.configService.get<string>('services.userService')!,
+      [ServiceName.USER]: this.configService.get<string>(
+        'services.userService',
+      )!,
     };
   }
 
-  async forward(service: ServiceName, options: ProxyRequestOptions): Promise<any> {
+  async forward(
+    service: ServiceName,
+    options: ProxyRequestOptions,
+  ): Promise<any> {
     const baseUrl = this.serviceUrls[service];
 
     if (!baseUrl) {
@@ -75,7 +80,9 @@ export class ProxyService {
     }
   }
 
-  private filterHeaders(headers: Record<string, string>): Record<string, string> {
+  private filterHeaders(
+    headers: Record<string, string>,
+  ): Record<string, string> {
     // Remove headers that shouldn't be forwarded
     const blacklist = ['host', 'content-length', 'connection'];
     const filtered: Record<string, string> = {};
@@ -108,10 +115,7 @@ export class ProxyService {
       );
     }
 
-    throw new HttpException(
-      { message, service },
-      status,
-    );
+    throw new HttpException({ message, service }, status);
   }
 
   getServiceUrl(service: ServiceName): string {
@@ -130,4 +134,3 @@ export class ProxyService {
     }
   }
 }
-

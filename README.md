@@ -29,7 +29,7 @@ npm run build -w @tradex/shared-types
 # Build database package
 npm run build -w @tradex/database
 
-# Build auth-shared package  
+# Build auth-shared package
 npm run build -w @tradex/auth-shared
 
 ```

@@ -1,4 +1,5 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
@@ -23,4 +24,140 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --- UI animations and helpers --- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in-up {
+  animation: fadeInUp 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* subtle card lift on hover */
+.card-hover {
+  transition:
+    box-shadow 0.25s,
+    transform 0.25s;
+}
+.card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 30px 40px rgba(2, 6, 23, 0.12);
+}
+
+/* filled input background (matching screenshots) */
+.input-filled {
+  background-color: #eef6ff;
+}
+
+/* Local auth font */
+.auth-font {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    sans-serif;
+}
+
+/* decorative globe glow + rotation + sheen */
+.globe-glow {
+  position: relative;
+}
+.globe-glow::before {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(255, 255, 255, 0.36),
+    rgba(11, 15, 22, 0)
+  );
+  filter: blur(14px);
+  opacity: 0.95;
+  z-index: -2;
+}
+
+.globe-rotor {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  animation: spin 36s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* grid subtle increase */
+.globe-grid ellipse,
+.globe-grid circle {
+  stroke-opacity: 0.06;
+}
+
+.globe-core {
+  /* stronger core shadow for depth */
+  filter: drop-shadow(0 28px 48px rgba(0, 0, 0, 0.62));
+}
+
+.globe-shine {
+  position: absolute;
+  top: 6%;
+  left: -80%;
+  width: 70%;
+  height: 28%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0)
+  );
+  transform: rotate(14deg);
+  filter: blur(18px);
+  opacity: 0.95;
+  animation: glide 6.5s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 999px;
+}
+@keyframes glide {
+  from {
+    left: -80%;
+  }
+  to {
+    left: 130%;
+  }
+}
+
+.globe-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: inset 0 -28px 60px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* User-requested: hide decorative globe layers so only the WebGL globe remains */
+.globe-glow::before,
+.globe-shine,
+.globe-shadow {
+  display: none !important;
+  animation: none !important;
+  opacity: 0 !important;
 }

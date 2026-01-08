@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import FontLoader from '../src/components/FontLoader';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -24,9 +25,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
+        {/* Client-only font loader to avoid SSR/client class mismatches */}
+        <FontLoader
+          geistSans={geistSans.variable}
+          geistMono={geistMono.variable}
+        />
         {children}
       </body>
     </html>

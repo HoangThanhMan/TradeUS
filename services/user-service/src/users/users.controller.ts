@@ -11,7 +11,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from '@tradex/shared-types';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  ChangePasswordDto,
+} from '@tradex/shared-types';
 
 @Controller('users')
 export class UsersController {
@@ -83,7 +87,8 @@ export class UsersController {
 
   @Get('check/email/:email')
   checkEmailExists(@Param('email') email: string) {
-    return this.usersService.checkEmailExists(email);9
+    return this.usersService.checkEmailExists(email);
+    9;
   }
 
   @Get('check/username/:username')
