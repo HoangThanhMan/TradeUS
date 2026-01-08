@@ -72,7 +72,11 @@ export class UsersService {
     totalPages: number;
   }> {
     const skip = (page - 1) * limit;
-    const users = await this.usersRepository.findWithPagination({}, skip, limit);
+    const users = await this.usersRepository.findWithPagination(
+      {},
+      skip,
+      limit,
+    );
     const total = await this.usersRepository.count({});
 
     return {
@@ -258,7 +262,9 @@ export class UsersService {
   }
 
   async checkEmailExists(email: string): Promise<{ exists: boolean }> {
-    const exists = await this.usersRepository.existsByEmail(email.toLowerCase());
+    const exists = await this.usersRepository.existsByEmail(
+      email.toLowerCase(),
+    );
     return { exists };
   }
 

@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 
 import { LocalStrategy } from './strategies/local.strategy';
 
-import {JwtStrategy, JwtAuthGuard, LocalAuthGuard} from '@tradex/auth-shared';
+import { JwtStrategy, JwtAuthGuard, LocalAuthGuard } from '@tradex/auth-shared';
 
 @Module({
   imports: [
@@ -32,7 +32,8 @@ import {JwtStrategy, JwtAuthGuard, LocalAuthGuard} from '@tradex/auth-shared';
       provide: JwtStrategy,
       useFactory: (configService: ConfigService) => {
         return new JwtStrategy({
-          jwtSecret: configService.get<string>('jwt.secret') || 'default-secret',
+          jwtSecret:
+            configService.get<string>('jwt.secret') || 'default-secret',
         });
       },
       inject: [ConfigService],
@@ -44,4 +45,3 @@ import {JwtStrategy, JwtAuthGuard, LocalAuthGuard} from '@tradex/auth-shared';
   exports: [AuthService, JwtAuthGuard],
 })
 export class AuthModule {}
-

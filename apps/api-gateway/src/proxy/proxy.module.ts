@@ -12,11 +12,8 @@ import { UserProxyController } from './controllers/user-proxy.controller';
     }),
     ConfigModule,
   ],
-  controllers: [
-    UserProxyController,
-  ],
+  controllers: [UserProxyController],
   providers: [ProxyService],
   exports: [ProxyService],
 })
 export class ProxyModule {}
-

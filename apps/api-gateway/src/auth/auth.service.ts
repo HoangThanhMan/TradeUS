@@ -10,7 +10,12 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import * as bcrypt from 'bcrypt';
-import { LoginDto, CreateUserDto, IJwtPayload, IAuthTokens } from '@tradex/shared-types';
+import {
+  LoginDto,
+  CreateUserDto,
+  IJwtPayload,
+  IAuthTokens,
+} from '@tradex/shared-types';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +29,9 @@ export class AuthService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.userServiceUrl = this.configService.get<string>('services.userService')!;
+    this.userServiceUrl = this.configService.get<string>(
+      'services.userService',
+    )!;
     this.jwtSecret = this.configService.get<string>('jwt.secret')!;
     this.refreshExpiry = this.configService.get<string>('jwt.refreshExpiry')!;
   }
@@ -33,7 +40,9 @@ export class AuthService {
     try {
       // Fetch user from user-service
       const response = await firstValueFrom(
-        this.httpService.get(`${this.userServiceUrl}/users/internal/by-email/${email}`),
+        this.httpService.get(
+          `${this.userServiceUrl}/users/internal/by-email/${email}`,
+        ),
       );
 
       const user = response.data;
@@ -76,11 +85,17 @@ export class AuthService {
     };
   }
 
-  async register(createUserDto: CreateUserDto): Promise<IAuthTokens & { user: any }> {
+  async register(
+    createUserDto: CreateUserDto,
+  ): Promise<IAuthTokens & { user: any }> {
     try {
       // Hash password before sending to user-service
-      const saltRounds = this.configService.get<number>('bcrypt.saltRounds') || 10;
-      const hashedPassword = await bcrypt.hash(createUserDto.password, saltRounds);
+      const saltRounds =
+        this.configService.get<number>('bcrypt.saltRounds') || 10;
+      const hashedPassword = await bcrypt.hash(
+        createUserDto.password,
+        saltRounds,
+      );
 
       // Create user via user-service
       const response = await firstValueFrom(
@@ -105,7 +120,9 @@ export class AuthService {
       this.logger.error('Registration error:', error.message);
 
       if (error.response?.status === 409) {
-        throw new BadRequestException(error.response.data.message || 'User already exists');
+        throw new BadRequestException(
+          error.response.data.message || 'User already exists',
+        );
       }
 
       throw new InternalServerErrorException('Error creating user');
@@ -161,4 +178,3 @@ export class AuthService {
     };
   }
 }
-

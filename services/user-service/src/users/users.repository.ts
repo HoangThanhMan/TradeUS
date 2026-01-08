@@ -16,7 +16,9 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
 
   // Find a user by their email address
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.findOne({ email: email.toLowerCase() } as FilterQuery<UserDocument>);
+    return this.findOne({
+      email: email.toLowerCase(),
+    } as FilterQuery<UserDocument>);
   }
 
   // Find a user by their username
@@ -26,7 +28,9 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
 
   // Check if a user exists with the given email
   async existsByEmail(email: string): Promise<boolean> {
-    return this.exists({ email: email.toLowerCase() } as FilterQuery<UserDocument>);
+    return this.exists({
+      email: email.toLowerCase(),
+    } as FilterQuery<UserDocument>);
   }
 
   // Check if a user exists with the given username
@@ -87,11 +91,7 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
     const regex = new RegExp(searchTerm, 'i');
     return this.model
       .find({
-        $or: [
-          { email: regex },
-          { username: regex },
-          { name: regex },
-        ],
+        $or: [{ email: regex }, { username: regex }, { name: regex }],
       })
       .skip(skip)
       .limit(limit)
@@ -102,11 +102,7 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
   async countSearchResults(searchTerm: string): Promise<number> {
     const regex = new RegExp(searchTerm, 'i');
     return this.model.countDocuments({
-      $or: [
-        { email: regex },
-        { username: regex },
-        { name: regex },
-      ],
+      $or: [{ email: regex }, { username: regex }, { name: regex }],
     });
   }
 }
