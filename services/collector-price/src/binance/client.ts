@@ -8,8 +8,12 @@ import {
   PriceMessage, 
   BinanceMiniTicker, 
   BinanceKline 
-} from '../types';
+} from '@tradex/shared-types';
 
+/**
+ * BinanceClient handles connection to Binance Futures WebSocket
+ * and fetching historical candlestick data via REST API
+ */
 export class BinanceClient {
   private ws: WebSocket | null = null;
   private isConnecting = false;
@@ -17,31 +21,36 @@ export class BinanceClient {
   private onMessageCallback: ((message: PriceMessage) => void) | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
 
-  // 1. Cấu hình Endpoint cho FUTURES (Quan trọng)
+  // Cấu hình Endpoint cho FUTURES
   private readonly restBaseUrl = 'https://fapi.binance.com/fapi/v1';
   private readonly wsBaseUrl = 'wss://fstream.binance.com/stream'; 
 
   constructor() {}
 
-  // --- PHẦN 1: REST API (Lấy dữ liệu lịch sử) ---
-
+  /**
+   * Fetch historical candlestick data from Binance Futures REST API
+   * @param params - HistoricalDataParams
+   * @returns Array of CandlestickData
+   */
   async getHistoricalData(params: HistoricalDataParams): Promise<CandlestickData[]> {
     try {
       const { symbol, interval, startTime, endTime, limit } = params;
       
+      // Thiết lập query parameters
       const queryParams: any = {
-        symbol: symbol.toUpperCase(), // REST API yêu cầu chữ HOA (BTCUSDT)
+        symbol: symbol.toUpperCase(),
         interval: interval,
-        limit: limit || 499, // Futures cho phép tối đa 1500, nhưng mặc định an toàn là 499
+        limit: limit || 499,
       };
       
+      // Thêm thời gian bắt đầu/kết thúc nếu có
       if (startTime) queryParams.startTime = startTime;
       if (endTime) queryParams.endTime = endTime;
 
       // Gọi endpoint Futures
       const response = await axios.get<any[][]>(`${this.restBaseUrl}/klines`, { 
         params: queryParams,
-        timeout: 5000 // Thêm timeout để tránh treo
+        timeout: 5000
       });
 
       // Format dữ liệu Futures
@@ -51,8 +60,8 @@ export class BinanceClient {
         high: parseFloat(item[2]),
         low: parseFloat(item[3]),
         close: parseFloat(item[4]),
-        volume: parseFloat(item[5]),      // Volume Coin
-        quoteVolume: parseFloat(item[7]), // Volume USDT (quan trọng với Futures)
+        volume: parseFloat(item[5]),
+        quoteVolume: parseFloat(item[7]),
       }));
 
     } catch (error: unknown) {
@@ -67,19 +76,21 @@ export class BinanceClient {
     }
   }
 
-  // --- PHẦN 2: WEBSOCKET (Dữ liệu Real-time) ---
-
+  /**
+   * Build WebSocket stream URL based on configured symbols and stream type
+   * @returns WebSocket URL string
+   */
   private buildStreamUrl(): string {
     const { symbols, streamType } = config.binance;
     
-    // Binance WS Stream yêu cầu symbol viết thường (lowercase)
+    // Binance WS Stream yêu cầu symbol viết thường
     const lowerSymbols = symbols.map(s => s.toLowerCase());
     let streams: string[] = [];
 
     if (streamType === 'miniTicker') {
       streams = lowerSymbols.map(s => `${s}@miniTicker`);
     } else if (streamType.startsWith('kline_')) {
-      // streamType ví dụ: 'kline_1m'
+      // streamType (kline_1m, kline_5m, ...)
       streams = lowerSymbols.map(s => `${s}@${streamType}`);
     } else {
       // Mặc định fallback về miniTicker
@@ -90,7 +101,11 @@ export class BinanceClient {
     return `${this.wsBaseUrl}?streams=${streams.join('/')}`;
   }
 
+  /** 
+   * Connect to Binance WebSocket
+   */
   async connect(): Promise<void> {
+    // Tránh kết nối lại nếu đã đang kết nối hoặc đã kết nối thành công
     if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) return;
     
     this.isConnecting = true;
@@ -130,35 +145,41 @@ export class BinanceClient {
     }
   }
 
+  /** 
+   * Register callback for incoming price messages
+   * @param callback - Function to handle PriceMessage
+   */
   onMessage(callback: (message: PriceMessage) => void): void {
     this.onMessageCallback = callback;
   }
 
+  /**
+   * Handle incoming WebSocket messages
+   * @param data - Raw WebSocket data
+   */
   private handleMessage(data: WebSocket.Data): void {
-    try {
-      const parsed = JSON.parse(data.toString());
-
-      // Combined Stream format: { stream: "btcusdt@miniTicker", data: { ... } }
-      const payload = parsed.data || parsed; 
-
-      const priceMessage = this.normalizeToPriceMessage(payload);
-      
-      if (priceMessage && this.onMessageCallback) {
-        this.onMessageCallback(priceMessage);
-      }
-    } catch (error) {
-      // Log ít thôi để tránh spam log file nếu lỗi liên tục
-      // logger.error('Failed to parse WS message');
+    
+    const parsed = JSON.parse(data.toString());
+    // Combined Stream format: { stream: "btcusdt@miniTicker", data: { ... } }
+    const payload = parsed.data || parsed; 
+    const priceMessage = this.normalizeToPriceMessage(payload);
+    
+    if (priceMessage && this.onMessageCallback) {
+      this.onMessageCallback(priceMessage);
     }
   }
 
+  /**
+   * Normalize raw data to PriceMessage
+   * @param data - Raw data from WebSocket
+   * @returns PriceMessage or null if unrecognized format
+   */
   private normalizeToPriceMessage(data: BinanceMiniTicker | BinanceKline): PriceMessage | null {
     try {
-      // Event type trong Futures miniTicker cũng là '24hrMiniTicker'
       if (data.e === '24hrMiniTicker') {
         const ticker = data as BinanceMiniTicker;
         return {
-          symbol: ticker.s,            // Symbol trả về thường là HOA (BTCUSDT)
+          symbol: ticker.s,
           timestamp: ticker.E,
           open: parseFloat(ticker.o),
           high: parseFloat(ticker.h),
@@ -166,14 +187,12 @@ export class BinanceClient {
           close: parseFloat(ticker.c),
           volume: parseFloat(ticker.v),
           quoteVolume: parseFloat(ticker.q),
-          source: 'binance-futures',   // Đánh dấu nguồn là Futures
+          source: 'binance-futures',
           streamType: 'miniTicker',
         };
       } 
       else if (data.e === 'kline') {
         const kline = data as BinanceKline;
-        // Chỉ lấy dữ liệu khi nến đã đóng (kline.k.x = true) nếu muốn chính xác tuyệt đối,
-        // hoặc lấy liên tục nếu muốn realtime nhảy giá. Ở đây lấy liên tục.
         return {
           symbol: kline.s,
           timestamp: kline.E,
@@ -193,6 +212,9 @@ export class BinanceClient {
     }
   }
 
+  /**
+   * Start periodic ping to keep WebSocket connection alive
+   */
   private startPingInterval(): void {
     // WebSocket chuẩn có thể tự đóng nếu idle. 
     // Gửi ping frame mỗi 3 phút (Binance server sẽ pong lại)
@@ -203,6 +225,9 @@ export class BinanceClient {
     }, 3 * 60 * 1000);
   }
 
+  /**
+   * Stop the ping interval
+   */
   private stopPingInterval(): void {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
@@ -210,6 +235,9 @@ export class BinanceClient {
     }
   }
 
+  /** 
+   * Handle WebSocket disconnection and attempt reconnection
+   */
   private handleDisconnect(): void {
     this.ws = null;
     if (this.reconnectAttempts < config.reconnect.maxAttempts) {
@@ -226,6 +254,9 @@ export class BinanceClient {
     }
   }
 
+  /** 
+   * Close the WebSocket connection gracefully
+   */
   async close(): Promise<void> {
     this.stopPingInterval();
     
@@ -239,6 +270,10 @@ export class BinanceClient {
     logger.info('Binance WebSocket closed gracefully');
   }
 
+  /** 
+   * Check if WebSocket is connected
+   * @returns true if connected, false otherwise
+   */
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
   }

@@ -1,19 +1,19 @@
 import config from './config';
 import logger from './logger';
 import { BinanceClient } from './binance/client';
-import { RabbitMQPublisher } from './rabbitmq/publisher';
-import { HistoricalDataParams } from './types';
+import { PricePublisher } from './rabbitmq';
+import { HistoricalDataParams } from '@tradex/shared-types';
 
 class CollectorPriceService {
   private binanceClient: BinanceClient;
-  private rabbitMQPublisher: RabbitMQPublisher;
+  private pricePublisher: PricePublisher;
   private isShuttingDown = false;
   private messageCount = 0;
   private historicalDataCount = 0;
 
   constructor() {
     this.binanceClient = new BinanceClient();
-    this.rabbitMQPublisher = new RabbitMQPublisher();
+    this.pricePublisher = new PricePublisher();
   }
 
   async start(): Promise<void> {
@@ -24,7 +24,7 @@ class CollectorPriceService {
 
     try {
       // Connect to RabbitMQ first
-      await this.rabbitMQPublisher.connect();
+      await this.pricePublisher.connect();
 
       // Setup message handler
       this.binanceClient.onMessage(async (priceMessage) => {
@@ -34,7 +34,7 @@ class CollectorPriceService {
           logger.info({ messageCount: this.messageCount }, 'Messages processed');
         }
 
-        const published = await this.rabbitMQPublisher.publish(priceMessage);
+        const published = await this.pricePublisher.publish(priceMessage);
         if (!published) {
           logger.warn({ symbol: priceMessage.symbol }, 'Failed to publish price message');
         }
@@ -62,7 +62,7 @@ class CollectorPriceService {
     setInterval(() => {
       logger.info({
         binanceConnected: this.binanceClient.isConnected(),
-        rabbitMQConnected: this.rabbitMQPublisher.isConnected(),
+        rabbitMQConnected: this.pricePublisher.isConnected(),
         totalMessages: this.messageCount,
         historicalDataFetched: this.historicalDataCount,
       }, 'Service status');
@@ -91,7 +91,7 @@ class CollectorPriceService {
           const historicalData = await this.binanceClient.getHistoricalData(params);
 
           if (historicalData.length > 0) {
-            const published = await this.rabbitMQPublisher.publishHistoricalData(
+            const published = await this.pricePublisher.publishHistoricalData(
               symbol,
               interval,
               historicalData
@@ -143,7 +143,7 @@ class CollectorPriceService {
       const historicalData = await this.binanceClient.getHistoricalData(params);
 
       if (historicalData.length > 0) {
-        const published = await this.rabbitMQPublisher.publishHistoricalData(
+        const published = await this.pricePublisher.publishHistoricalData(
           symbol,
           interval,
           historicalData
@@ -199,7 +199,7 @@ class CollectorPriceService {
     try {
       await Promise.all([
         this.binanceClient.close(),
-        this.rabbitMQPublisher.close(),
+        this.pricePublisher.close(),
       ]);
       
       logger.info({ totalMessagesProcessed: this.messageCount }, 'Collector Price Service shut down gracefully');

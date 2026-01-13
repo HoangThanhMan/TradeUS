@@ -16,6 +16,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@tradex/amqp-client": "*",
+    "@tradex/shared-types": "*",
     "amqplib": "^0.10.4",
     "axios": "^1.13.2",
     "dotenv": "^16.3.1",
