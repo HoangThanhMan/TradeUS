@@ -1,8 +1,16 @@
-import { Logger, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
 
+// Interface for logger to avoid version conflicts between packages
+export interface ILogger {
+  warn(message: string, ...args: unknown[]): void;
+  log(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
+  debug(message: string, ...args: unknown[]): void;
+}
+
 export abstract class AbstractRepository<TDocument> {
-  protected abstract readonly logger: Logger;
+  protected abstract readonly logger: ILogger;
 
   constructor(protected readonly model: Model<TDocument>) {}
 
