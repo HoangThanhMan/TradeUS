@@ -1,31 +1,90 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Globe from '../src/components/Globe';
+import { useRouter } from 'next/navigation'; // Dùng router của Next.js 13+
+import Globe from '../../src/components/Globe'; // Đảm bảo đường dẫn import Globe đúng với project của bạn
+import { authService } from '../../src/services/auth.service'; // Import service vừa tạo
 
 export default function AuthPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
-  const toggle = () =>
-    setMode((m) => (m === 'sign-in' ? 'sign-up' : 'sign-in'));
 
-  // controlled inputs for nicer demo UX
+  // State quản lý dữ liệu và trạng thái
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
 
-  // prefill demo values for visual parity with screenshots
+  const [isLoading, setIsLoading] = useState(false); // Hiệu ứng loading
+  const [error, setError] = useState(''); // Hiển thị lỗi
+
+  const toggle = () => {
+    setMode((m) => (m === 'sign-in' ? 'sign-up' : 'sign-in'));
+    setError(''); // Xóa lỗi khi chuyển tab
+  };
+
+  // Prefill dữ liệu demo
   useEffect(() => {
     if (mode === 'sign-in') {
       setEmail('admin@cryptotrading.com');
       setPassword('');
     } else {
-      setUsername('admin@cryptotrading.com');
+      setUsername('');
       setEmail('');
       setPassword('');
       setConfirm('');
     }
   }, [mode]);
+
+  // HÀM XỬ LÝ SUBMIT FORM
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      if (mode === 'sign-in') {
+        // --- Xử lý Đăng Nhập ---
+        await authService.login(email, password);
+        const response = await fetch('http://localhost:3001/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Lưu token vào localStorage
+        localStorage.setItem('token', data.token);
+        
+        alert('Login successfully ^.^');
+        // Redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        alert('Login failed!');
+      }        // Chuyển hướng sau khi login thành công (ví dụ về trang Dashboard)
+        // router.push('/dashboard');
+      } else {
+        // --- Xử lý Đăng Ký ---
+        if (password !== confirm) {
+          setError('Passwords do not match!');
+          setIsLoading(false);
+          return;
+        }
+        await authService.register(email, password, username);
+        alert('Registration Successful! Please login.');
+        setMode('sign-in'); // Chuyển về tab login
+      }
+    } catch (err: any) {
+      // Hiển thị lỗi từ Backend trả về
+      console.error(err);
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const inputBase =
     'w-full rounded-md border border-gray-200 px-3 py-3 focus:outline-none transition-colors duration-200';
@@ -59,7 +118,7 @@ export default function AuthPage() {
           {/* Left: form */}
           <div className="md:w-1/2 bg-white p-12 fade-in-up flex items-center justify-center">
             <div className="w-full max-w-md auth-font">
-              <h2 className="text-3xl font-bold mb-1">
+              <h2 className="text-3xl font-bold text-black mb-1">
                 {mode === 'sign-in' ? 'Welcome Back' : 'Create Account'}
               </h2>
               <p className="text-sm text-gray-500 mb-6">
@@ -68,7 +127,14 @@ export default function AuthPage() {
                   : 'Join TradeX today'}
               </p>
 
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+              {/* Hiển thị lỗi nếu có */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 text-sm rounded-md border border-red-200">
+                  ⚠️ {error}
+                </div>
+              )}
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 {mode === 'sign-up' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -77,6 +143,7 @@ export default function AuthPage() {
                     <input
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      required
                       className={`${inputBase} ${username ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
                       placeholder="Your username"
                     />
@@ -88,9 +155,11 @@ export default function AuthPage() {
                     Email Address
                   </label>
                   <input
+                    type="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`${inputBase} ${email ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
+                    className={`${inputBase} ${email ? 'input-filled' : 'bg-gray-50'} text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-200`}
                     placeholder={
                       mode === 'sign-in' ? 'Email address' : 'Enter your email'
                     }
@@ -103,20 +172,22 @@ export default function AuthPage() {
                   </label>
                   <input
                     type="password"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`${inputBase} ${password ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
+                    className={`${inputBase} ${password ? 'input-filled' : 'bg-gray-50'} text-gray-900 placeholder-gray-400  focus:ring-2 focus:ring-indigo-200`}
                     placeholder="Your password"
                   />
                 </div>
 
                 {mode === 'sign-up' && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-black-700 mb-1">
                       Confirm Password
                     </label>
                     <input
                       type="password"
+                      required
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
                       className={`${inputBase} ${confirm ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
@@ -126,8 +197,15 @@ export default function AuthPage() {
                 )}
 
                 <div>
-                  <button className="w-full bg-[#0b1720] text-white py-3 rounded-md shadow-md hover:opacity-95 transition-transform active:scale-99">
-                    {mode === 'sign-in' ? 'Sign In' : 'Create Account'}
+                  <button
+                    disabled={isLoading}
+                    className={`w-full bg-[#0b1720] text-white py-3 rounded-md shadow-md transition-transform active:scale-99 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-95'}`}
+                  >
+                    {isLoading
+                      ? 'Processing...'
+                      : mode === 'sign-in'
+                        ? 'Sign In'
+                        : 'Create Account'}
                   </button>
                 </div>
               </form>

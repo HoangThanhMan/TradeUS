@@ -1,0 +1,39 @@
+{
+  "name": "collector-price",
+  "version": "0.1.0",
+  "description": "Trade-X Price Collector Service - Binance WebSocket to RabbitMQ",
+  "author": "Trade-X Team",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "start:prod": "node dist/main.js",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@tradex/amqp-client": "*",
+    "@tradex/shared-types": "*",
+    "amqplib": "^0.10.4",
+    "axios": "^1.13.2",
+    "dotenv": "^16.3.1",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.4",
+    "@types/node": "^20.10.6",
+    "@types/ws": "^8.5.10",
+    "rimraf": "^5.0.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

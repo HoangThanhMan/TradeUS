@@ -1,0 +1,279 @@
+# Trade-X Development Docker Compose
+# Run with: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  # =============================================================================
+  # Infrastructure Services
+  # =============================================================================
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: tradex-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tradex-network
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: tradex-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: tradex
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tradex-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tradex-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - tradex-network
+
+  # =============================================================================
+  # Data Collection Services
+  # =============================================================================
+
+  # Price Collector - Binance WebSocket to RabbitMQ
+  collector-price:
+    build:
+      context: .
+      dockerfile: ./services/collector-price/Dockerfile
+    container_name: tradex-collector-price
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: info
+      BINANCE_WS_URL: wss://fstream.binance.com/stream
+      BINANCE_SYMBOLS: btcusdt,ethusdt,bnbusdt,solusdt,xrpusdt
+      BINANCE_STREAM_TYPE: miniTicker
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: tradex.prices
+      RABBITMQ_EXCHANGE_TYPE: topic
+      RABBITMQ_ROUTING_KEY_PREFIX: price
+      RECONNECT_INTERVAL_MS: 5000
+      MAX_RECONNECT_ATTEMPTS: 10
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tradex-network
+
+#   # =============================================================================
+#   # AI/ML Services
+#   # =============================================================================
+
+#   # Sentiment Analysis Service
+#   sentiment-service:
+#     build:
+#       context: ./services/sentiment-service
+#       dockerfile: Dockerfile
+#     container_name: tradex-sentiment-service
+#     restart: unless-stopped
+#     ports:
+#       - "8001:8001"
+#     environment:
+#       ENVIRONMENT: development
+#       HOST: 0.0.0.0
+#       PORT: 8001
+#       LOG_LEVEL: INFO
+#       CORS_ORIGINS: "*"
+#       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     healthcheck:
+#       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - tradex-network0
+
+#   # =============================================================================
+#   # Backend Services (Uncomment when ready)
+#   # =============================================================================
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./apps/api-gateway/Dockerfile
+    container_name: tradex-api-gateway
+    ports:
+      - "4000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - tradex-network
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+    container_name: tradex-user-service
+    ports:
+      - "3010:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - tradex-network
+
+  # =============================================================================
+  # WebSocket Gateway Instances (Load Balanced with Nginx IP Hash)
+  # =============================================================================
+  
+  # WebSocket Gateway Instance 1
+  ws-gateway-1:
+    build:
+      context: .
+      dockerfile: ./apps/ws-gateway/Dockerfile
+    container_name: tradex-ws-gateway-1
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      INSTANCE_ID: ws-gateway-1
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: tradex.prices
+      RABBITMQ_EXCHANGE_TYPE: topic
+      RABBITMQ_QUEUE_PREFIX: ws-gateway
+      RABBITMQ_ROUTING_PATTERNS: price.#
+      CORS_ORIGINS: "*"
+      LOG_LEVEL: debug
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tradex-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # WebSocket Gateway Instance 2
+  ws-gateway-2:
+    build:
+      context: .
+      dockerfile: ./apps/ws-gateway/Dockerfile
+    container_name: tradex-ws-gateway-2
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      INSTANCE_ID: ws-gateway-2
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: tradex.prices
+      RABBITMQ_EXCHANGE_TYPE: topic
+      RABBITMQ_QUEUE_PREFIX: ws-gateway
+      RABBITMQ_ROUTING_PATTERNS: price.#
+      CORS_ORIGINS: "*"
+      LOG_LEVEL: debug
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - tradex-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # Nginx Load Balancer
+  # =============================================================================
+  
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    container_name: tradex-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - ws-gateway-1
+      - ws-gateway-2
+    networks:
+      - tradex-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  tradex-network:
+    driver: bridge
+    name: tradex-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  rabbitmq_data:
+    name: tradex-rabbitmq-data
+  mongodb_data:
+    name: tradex-mongodb-data
+  redis_data:
+    name: tradex-redis-data
