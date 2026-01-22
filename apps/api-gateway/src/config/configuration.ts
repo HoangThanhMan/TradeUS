@@ -7,6 +7,8 @@ export default () => ({
   },
   services: {
     userService: process.env.USER_SERVICE_URL || 'http://localhost:3010',
+    sentimentService: process.env.SENTIMENT_SERVICE_URL || 'http://localhost:8001',
+    predictionService: process.env.PREDICTION_SERVICE_URL || 'http://localhost:8002',
   },
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10),
