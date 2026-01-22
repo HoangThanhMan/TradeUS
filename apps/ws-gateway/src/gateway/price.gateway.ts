@@ -1,3 +1,5 @@
+// apps/ws-gateway/src/gateways/price.gateway.ts
+
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -13,19 +15,21 @@ import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 import { PriceConsumerService, PriceEvent } from '../rabbitmq/price-consumer.service';
 import { PriceMessage } from '@tradex/shared-types';
+import { BinanceHistoricalService } from '../services/binance-historical.service';
 
 interface SubscriptionPayload {
   symbols: string[];
+  interval?: string;
 }
 
 interface ClientSubscription {
-  symbols: Set<string>;
+  symbols: Map<string, Set<string>>;
   subscribedAt: number;
 }
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // Will be configured via nginx in production
+    origin: '*',
     credentials: true,
   },
   namespace: '/prices',
@@ -45,6 +49,7 @@ export class PriceGateway
   constructor(
     private readonly configService: ConfigService,
     private readonly priceConsumerService: PriceConsumerService,
+    private readonly binanceHistoricalService: BinanceHistoricalService,
   ) {
     this.instanceId = this.configService.get<string>('instanceId', 'ws-gateway-1');
   }
@@ -54,19 +59,20 @@ export class PriceGateway
   }
 
   async onModuleInit() {
-    // Subscribe to price events from RabbitMQ
     this.unsubscribeFromPrices = this.priceConsumerService.onPrice(
-      (event: PriceEvent) => this.handlePriceEvent(event),
+      (event: PriceEvent) => {
+        this.handlePriceEvent(event);
+      },
     );
-    this.logger.log(`[${this.instanceId}] Subscribed to price events`);
   }
+
 
   handleConnection(client: Socket) {
     const clientId = client.id;
     const clientIp = client.handshake.address;
     
     this.clientSubscriptions.set(clientId, {
-      symbols: new Set(),
+      symbols: new Map(),
       subscribedAt: Date.now(),
     });
 
@@ -74,7 +80,6 @@ export class PriceGateway
       `[${this.instanceId}] Client connected: ${clientId} from ${clientIp}`,
     );
 
-    // Send connection acknowledgment
     client.emit('connected', {
       clientId,
       instanceId: this.instanceId,
@@ -86,6 +91,17 @@ export class PriceGateway
 
   handleDisconnect(client: Socket) {
     const clientId = client.id;
+    const subscription = this.clientSubscriptions.get(clientId);
+
+    if (subscription) {
+      subscription.symbols.forEach((intervals, symbol) => {
+        intervals.forEach(interval => {
+          const roomKey = this.getRoomKey(symbol, interval);
+          client.leave(roomKey);
+        });
+      });
+    }
+
     this.clientSubscriptions.delete(clientId);
     
     this.logger.log(`[${this.instanceId}] Client disconnected: ${clientId}`);
@@ -93,7 +109,7 @@ export class PriceGateway
   }
 
   @SubscribeMessage('subscribe')
-  handleSubscribe(
+  async handleSubscribe(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SubscriptionPayload,
   ) {
@@ -105,22 +121,93 @@ export class PriceGateway
     }
 
     const symbols = payload.symbols.map((s) => s.toUpperCase());
+    const interval = payload.interval || '1d';
+    
+    this.logger.log(
+      `[${this.instanceId}] Subscribe request from ${clientId}: symbols=${symbols.join(',')}, interval=${interval}`,
+    );
     
     // Add symbols to client's subscription
-    symbols.forEach((symbol) => {
-      subscription.symbols.add(symbol);
-      client.join(`symbol:${symbol}`);
-    });
+    for (const symbol of symbols) {
+      if (!subscription.symbols.has(symbol)) {
+        subscription.symbols.set(symbol, new Set());
+      }
 
-    this.logger.log(
-      `[${this.instanceId}] Client ${clientId} subscribed to: ${symbols.join(', ')}`,
-    );
+      const intervals = subscription.symbols.get(symbol)!;
+      intervals.add(interval);
+
+      const roomKey = this.getRoomKey(symbol, interval);
+      client.join(roomKey);
+
+      this.logger.log(
+        `[${this.instanceId}] Client ${clientId} joined room: ${roomKey}`,
+      );
+
+      this.fetchAndSendHistoricalData(client, symbol, interval);
+    }
 
     return {
       success: true,
-      subscribedSymbols: Array.from(subscription.symbols),
+      subscribedSymbols: symbols,
+      interval,
       timestamp: Date.now(),
     };
+  }
+
+  /**
+   * Fetch historical data from Binance và gửi cho client
+   */
+  private async fetchAndSendHistoricalData(
+    client: Socket,
+    symbol: string,
+    interval: string,
+  ): Promise<void> {
+    try {
+      const limit = this.binanceHistoricalService.getRecommendedLimit(interval);
+      
+      this.logger.log(
+        `[${this.instanceId}] Fetching historical data for ${symbol}:${interval} (limit: ${limit})`,
+      );
+
+      const candles = await this.binanceHistoricalService.getHistoricalKlines(
+        symbol,
+        interval,
+        limit,
+      );
+
+      if (candles.length > 0) {
+        const historicalData = {
+          symbol,
+          interval,
+          source: 'binance',
+          dataType: 'historical' as const,
+          count: candles.length,
+          data: candles,
+          fetchedAt: Date.now(),
+        };
+
+        this.logger.log(
+          `[${this.instanceId}] Sending ${candles.length} candles to client ${client.id} for ${symbol}:${interval}`,
+        );
+
+        client.emit('historical', {
+          symbol,
+          interval,
+          data: historicalData,
+          instanceId: this.instanceId,
+          timestamp: Date.now(),
+        });
+      } else {
+        this.logger.warn(
+          `[${this.instanceId}] No historical data available for ${symbol}:${interval}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `[${this.instanceId}] Failed to fetch historical for ${symbol}:${interval}`,
+        error,
+      );
+    }
   }
 
   @SubscribeMessage('unsubscribe')
@@ -136,20 +223,35 @@ export class PriceGateway
     }
 
     const symbols = payload.symbols.map((s) => s.toUpperCase());
+    const interval = payload.interval || '1d';
 
-    // Remove symbols from client's subscription
     symbols.forEach((symbol) => {
-      subscription.symbols.delete(symbol);
-      client.leave(`symbol:${symbol}`);
+      const intervals = subscription.symbols.get(symbol);
+      
+      if (intervals) {
+        intervals.delete(interval);
+        
+        if (intervals.size === 0) {
+          subscription.symbols.delete(symbol);
+        }
+      }
+
+      const roomKey = this.getRoomKey(symbol, interval);
+      client.leave(roomKey);
+
+      this.logger.log(
+        `[${this.instanceId}] Client ${clientId} left room: ${roomKey}`,
+      );
     });
 
     this.logger.log(
-      `[${this.instanceId}] Client ${clientId} unsubscribed from: ${symbols.join(', ')}`,
+      `[${this.instanceId}] Client ${clientId} unsubscribed from: ${symbols.join(', ')} [${interval}]`,
     );
 
     return {
       success: true,
-      subscribedSymbols: Array.from(subscription.symbols),
+      unsubscribedSymbols: symbols,
+      interval,
       timestamp: Date.now(),
     };
   }
@@ -159,36 +261,54 @@ export class PriceGateway
     return { pong: true, timestamp: Date.now(), instanceId: this.instanceId };
   }
 
-  /**
-   * Handle price events from RabbitMQ and broadcast to subscribed clients
-   */
   private handlePriceEvent(event: PriceEvent) {
+
     if (event.type === 'realtime') {
-      const priceData = event.data as PriceMessage;
+      const priceData = event.data as any;
       const symbol = priceData.symbol.toUpperCase();
+      const interval = priceData.interval;
 
-      // Broadcast to all clients subscribed to this symbol
-      this.server.to(`symbol:${symbol}`).emit('price', {
-        symbol,
-        data: priceData,
-        instanceId: this.instanceId,
-        timestamp: Date.now(),
-      });
+      if (!interval) {
+        this.logger.log('Realtime price missing interval', priceData);
+        return;
+      }
 
-      // Also broadcast to 'all' room for clients who want all prices
+      // If we have interval info, broadcast to specific room
+      if (interval) {
+        // this.logger.log('📤 EMIT TO GATEWAY', symbol, interval);
+        const roomKey = this.getRoomKey(symbol, interval);
+        
+        this.server.to(roomKey).emit('price', {
+          symbol,
+          interval,
+          data: priceData,
+          instanceId: this.instanceId,
+          timestamp: Date.now(),
+        });
+
+        // this.logger.log({
+        //   symbol,
+        //   interval,
+        //   data: priceData,
+        // }, 'Realtime price received');
+
+        // this.logger.debug(
+        //   `Broadcasted kline update to ${roomKey}: ${priceData.close}`,
+        // );
+      } else {
+        this.server.to(`symbol:${symbol}`).emit('price', {
+          symbol,
+          data: priceData,
+          instanceId: this.instanceId,
+          timestamp: Date.now(),
+        });
+      }
+
+      // Also broadcast to 'all' room
       this.server.to('all').emit('price', {
         symbol,
+        interval,
         data: priceData,
-        instanceId: this.instanceId,
-        timestamp: Date.now(),
-      });
-    } else if (event.type === 'historical') {
-      // Handle historical data - send to specific symbol room
-      const symbol = event.data.symbol.toUpperCase();
-      
-      this.server.to(`symbol:${symbol}`).emit('historical', {
-        symbol,
-        data: event.data,
         instanceId: this.instanceId,
         timestamp: Date.now(),
       });
@@ -225,9 +345,6 @@ export class PriceGateway
     };
   }
 
-  /**
-   * Broadcast connection stats
-   */
   private broadcastStats() {
     const stats = {
       instanceId: this.instanceId,
@@ -238,15 +355,18 @@ export class PriceGateway
     this.server.emit('stats', stats);
   }
 
-  /**
-   * Get current stats
-   */
   getStats() {
-    const symbolCounts: Record<string, number> = {};
+    const symbolCounts: Record<string, Record<string, number>> = {};
     
     this.clientSubscriptions.forEach((sub) => {
-      sub.symbols.forEach((symbol) => {
-        symbolCounts[symbol] = (symbolCounts[symbol] || 0) + 1;
+      sub.symbols.forEach((intervals, symbol) => {
+        if (!symbolCounts[symbol]) {
+          symbolCounts[symbol] = {};
+        }
+        
+        intervals.forEach(interval => {
+          symbolCounts[symbol][interval] = (symbolCounts[symbol][interval] || 0) + 1;
+        });
       });
     });
 
@@ -256,5 +376,9 @@ export class PriceGateway
       symbolSubscriptions: symbolCounts,
       timestamp: Date.now(),
     };
+  }
+
+  private getRoomKey(symbol: string, interval: string): string {
+    return `${symbol}:${interval}`;
   }
 }

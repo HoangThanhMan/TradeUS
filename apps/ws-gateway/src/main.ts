@@ -9,7 +9,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const logger = new Logger('WsGateway');
 
-  const port = configService.get<number>('PORT', 3001);
+  const port = configService.get<number>('PORT', 3002);
   const instanceId = configService.get<string>('INSTANCE_ID', 'ws-gateway-1');
   const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:3000');
 
