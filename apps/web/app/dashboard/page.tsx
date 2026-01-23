@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,8 +15,9 @@ const WS_URL = 'http://localhost:3002/prices';
 export default function DashboardPage() {
   const router = useRouter();
   const [symbol, setSymbol] = useState('BTCUSDT');
-  const [timeframe, setTimeframe] = useState('1s'); // Default to 1s
+  const [timeframe, setTimeframe] = useState('1m');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,7 +31,6 @@ export default function DashboardPage() {
   const { socket, status, error, subscribe, unsubscribe } = useWebSocket(WS_URL);
   const { candles, latestPrice, loading } = useChartData(socket, symbol, timeframe);
 
-  // Subscribe/Unsubscribe khi symbol hoặc timeframe thay đổi
   useEffect(() => {
     if (socket && status.connected) {
       console.log('🔔 Subscribing to', symbol, 'with interval', timeframe);
@@ -68,7 +66,7 @@ export default function DashboardPage() {
       <Header status={status} />
       
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar/>
         
         <div className="flex-1 flex flex-col">
           <ChartToolbar 
@@ -80,7 +78,6 @@ export default function DashboardPage() {
           
           <InfoBar latestPrice={latestPrice} />
           
-          {/* Connection Status */}
           {!status.connected && (
             <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2 text-yellow-700 text-sm">
               ⚠️ Connecting to WebSocket...
@@ -93,26 +90,12 @@ export default function DashboardPage() {
             </div>
           )}
           
-          {/* Debug Info */}
-          <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-blue-600 text-xs">
-            Connected: {status.connected ? '✅' : '❌'} | 
-            Symbol: {symbol} | 
-            Interval: {timeframe} | 
-            Candles: {candles.length} | 
-            Loading: {loading ? '⏳' : '✅'}
-          </div>
-          
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-gray-500">
                 <div className="text-4xl mb-2">📊</div>
                 <div>Loading chart data for {symbol}...</div>
-                <div className="text-sm mt-2">
-                  Interval: {timeframe}
-                </div>
-                <div className="text-xs mt-2 text-gray-400">
-                  Waiting for historical data from collector service
-                </div>
+                <div className="text-sm mt-2">Interval: {timeframe}</div>
               </div>
             </div>
           ) : candles.length === 0 ? (
