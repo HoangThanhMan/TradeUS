@@ -26,7 +26,8 @@ class CollectorPriceService {
     logger.info(
       { 
         config: { ...config, rabbitmq: { ...config.rabbitmq, url: '***' } },
-        intervals: this.intervals
+        intervals: this.intervals,
+        symbols: config.binance.symbols
       }, 
       'Starting Collector Price Service with kline streams...'
     );
