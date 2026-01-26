@@ -1,38 +1,82 @@
-// src/components/dashboard/Sidebar.tsx
-'use client';
-
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { IconLine, IconCircleDot, IconChartDots3, IconChartGridDotsFilled, IconPolygon, IconMagnet, IconLockBitcoin, IconEye, IconTrash } from '@tabler/icons-react';
-
+import React from 'react';
+import { ChevronLeft, ChevronRight, MousePointer2 } from 'lucide-react';
+import { 
+  IconLine, 
+  IconCircleDot, 
+  IconChartDots3, 
+  IconChartGridDotsFilled, 
+  IconPolygon, 
+  IconMagnet, 
+  IconLock,
+  IconLockOpen,
+  IconEye, 
+  IconEyeOff,
+  IconTrash 
+} from '@tabler/icons-react';
+import { DrawingToolType } from '../../types/drawing.types';
 
 interface SidebarProps {
-  onToolSelect?: (tool: string) => void;
+  activeTool: DrawingToolType;
+  magnetMode: boolean;
+  drawingsLocked: boolean;
+  drawingsVisible: boolean;
+  onToolSelect: (tool: DrawingToolType) => void;
+  onToggleMagnet: () => void;
+  onToggleLock: () => void;
+  onToggleVisibility: () => void;
+  onClearAll: () => void;
 }
 
-export function Sidebar({ onToolSelect }: SidebarProps) {
-  const [activeTool, setActiveTool] = useState('cursor');
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({
+  activeTool,
+  magnetMode,
+  drawingsLocked,
+  drawingsVisible,
+  onToolSelect,
+  onToggleMagnet,
+  onToggleLock,
+  onToggleVisibility,
+  onClearAll,
+}: SidebarProps) {
+  const [collapsed, setCollapsed] = React.useState(false);
 
-  const tools = [
-    { id: 'line', icon: IconLine, label: 'Line' },
-    { id: 'lines', icon: IconChartDots3, label: 'Lines' },
-    { id: 'circledot', icon: IconCircleDot, label: 'Circle' },
-    { id: 'grid', icon: IconChartGridDotsFilled, label: 'Grid' },
-    { id: 'polygon', icon: IconPolygon, label: 'Polygon', dividerAfter: true },
-
-    { id: 'magnet', icon: IconMagnet, label: 'Magnet' },
-    { id: 'lock', icon: IconLockBitcoin, label: 'Lock' },
-    { id: 'eye', icon: IconEye, label: 'Eye', dividerAfter: true },
-
-    { id: 'delete', icon: IconTrash, label: 'Delete' },
+  const tools: Array<{
+    id: DrawingToolType | 'magnet' | 'lock' | 'visibility' | 'delete';
+    icon: any;
+    label: string;
+    dividerAfter?: boolean;
+  }> = [
+    { id: 'cursor', icon: MousePointer2, label: 'Cursor' },
+    { id: 'simpleLine', icon: IconLine, label: 'Line' },
+    { id: 'circle', icon: IconCircleDot, label: 'Circle' },
+    { id: 'priceLevel', icon: IconChartGridDotsFilled, label: 'Price Levels' },
+    { id: 'trendLine', icon: IconChartDots3, label: 'Trend Line' },
+    { id: 'fibonacciRetracement', icon: IconPolygon, label: 'Fibonacci', dividerAfter: true },
+    { id: 'magnet', icon: IconMagnet, label: 'Magnet Mode' },
+    { id: 'lock', icon: drawingsLocked ? IconLock : IconLockOpen, label: drawingsLocked ? 'Unlock' : 'Lock' },
+    { id: 'visibility', icon: drawingsVisible ? IconEye : IconEyeOff, label: drawingsVisible ? 'Hide All' : 'Show All', dividerAfter: true },
+    { id: 'delete', icon: IconTrash, label: 'Delete All' },
   ];
 
-
-
   const handleToolClick = (toolId: string) => {
-    setActiveTool(toolId);
-    onToolSelect?.(toolId);
+    if (toolId === 'magnet') {
+      onToggleMagnet();
+    } else if (toolId === 'lock') {
+      onToggleLock();
+    } else if (toolId === 'visibility') {
+      onToggleVisibility();
+    } else if (toolId === 'delete') {
+      onClearAll();
+    } else {
+      onToolSelect(toolId as DrawingToolType);
+    }
+  };
+
+  const isActive = (toolId: string) => {
+    if (toolId === 'magnet') return magnetMode;
+    if (toolId === 'lock') return drawingsLocked;
+    if (toolId === 'visibility') return !drawingsVisible;
+    return activeTool === toolId;
   };
 
   return (
@@ -47,60 +91,43 @@ export function Sidebar({ onToolSelect }: SidebarProps) {
         flex-shrink-0
       `}
     >
-      {/* Toggle button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="
-          w-10 h-10 
-          flex items-center justify-center
-          text-gray-600
-          hover:bg-gray-100
-          rounded
-        "
+        className="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded"
         title={collapsed ? 'Show tools' : 'Hide tools'}
       >
-        {collapsed ? (
-          <ChevronRight className="w-4 h-4 z-[999]" />
-        ) : (
-          <ChevronLeft className="w-4 h-4" />
-        )}
+        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
 
       <div className="w-full h-px bg-gray-300" />
 
-      {/* Tools */}
       {!collapsed && (
-        <div className="mt-2 flex flex-col items-center">
+        <div className="mt-2 flex flex-col items-center gap-0.5">
           {tools.map((tool) => {
             const Icon = tool.icon;
-
             return (
               <React.Fragment key={tool.id}>
                 <button
                   onClick={() => handleToolClick(tool.id)}
                   className={`
                     w-10 h-10 flex items-center justify-center rounded
-                    transition-colors
+                    transition-colors relative
                     ${
-                      activeTool === tool.id
-                        ? 'bg-gray-300 text-black'
-                        : 'text-gray-600 hover:bg-gray-100'
+                      isActive(tool.id)
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-200'
                     }
                   `}
                   title={tool.label}
                 >
-                  <Icon size={18} strokeWidth={1.75} />
+                  <Icon size={21} strokeWidth={1.75} />
                 </button>
-
-                {tool.dividerAfter && (
-                  <div className="my-2 w-full h-px bg-gray-300" />
-                )}
+                {tool.dividerAfter && <div className="my-1 w-8 h-px bg-gray-300" />}
               </React.Fragment>
             );
           })}
         </div>
       )}
-
     </div>
   );
 }

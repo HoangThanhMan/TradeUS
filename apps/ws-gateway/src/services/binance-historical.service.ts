@@ -122,7 +122,7 @@ export class BinanceHistoricalService {
   getRecommendedLimit(interval: string): number {
     switch (interval) {
       case '1s':
-        return 300  ; // 2 minutes
+        return 500; // 2 minutes
       case '1m':
         return 500; // 4 hours
       case '5m':

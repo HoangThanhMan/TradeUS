@@ -1,3 +1,4 @@
+// src/components/chart/MultiChartContainer.tsx
 'use client';
 
 import React from 'react';
@@ -23,7 +24,7 @@ export function MultiChartContainer({ layout, socket, connected, onUpdateChart }
         gap: '12px',
       }}
     >
-      {layout.charts.map((chartConfig) => (
+      {layout.charts.map((chartConfig, index) => ( // 🔥 ADD index here
         <div 
           key={chartConfig.id}
           style={{
@@ -39,6 +40,7 @@ export function MultiChartContainer({ layout, socket, connected, onUpdateChart }
             socket={socket}
             connected={connected}
             onUpdateChart={onUpdateChart}
+            chartNumber={index + 1} 
           />
         </div>
       ))}

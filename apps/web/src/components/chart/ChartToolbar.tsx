@@ -1,5 +1,3 @@
-'use client';
-
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -15,6 +13,7 @@ interface ChartToolbarProps {
   timeframe: string;
   onSymbolChange: (symbol: string) => void;
   onTimeframeChange: (tf: string) => void;
+  onIndicatorClick?: () => void;
 }
 
 const pjs = Plus_Jakarta_Sans({ 
@@ -26,7 +25,8 @@ export function ChartToolbar({
   symbol,
   timeframe,
   onSymbolChange,
-  onTimeframeChange
+  onTimeframeChange,
+  onIndicatorClick
 }: ChartToolbarProps) {
 
   const timeframes = ['1s', '1m', '5m', '15m', '1h', '2h', '4h', '1d', '1w'];
@@ -35,7 +35,6 @@ export function ChartToolbar({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // click outside -> close
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -103,14 +102,16 @@ export function ChartToolbar({
         </div>
       </div>
 
-      {/* Divider */}
-      
-
       {/* RIGHT */}
       <div className="flex items-center gap-1 text-[11.5px] text-gray-700">
 
         <div className="h-10 w-px bg-gray-200 mx-3" />
-        <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100">
+        
+        {/* Indicator Button - IMPORTANT */}
+        <button 
+          onClick={onIndicatorClick}
+          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100"
+        >
           <FunctionSquare className="w-4 h-4" />
           <span>Indicator</span>
         </button>
