@@ -50,29 +50,29 @@ export class Binance1sClient {
   private reconnectTimeout: NodeJS.Timeout | null = null;
 
   constructor(symbols: string[]) {
-    this.symbols = symbols.map(s => s.toUpperCase());
+    this.symbols = symbols.map((s) => s.toUpperCase());
   }
 
   async connect(): Promise<void> {
-    // Initialize aggregators for all symbols
     await this.initializeAggregators();
 
-    // Connect to aggTrade stream
     return new Promise((resolve, reject) => {
       try {
         const streams = this.symbols
-          .map(s => `${s.toLowerCase()}@aggTrade`)
+          .map((s) => `${s.toLowerCase()}@aggTrade`)
           .join('/');
 
         const url = `${this.wsUrl}/${streams}`;
-        
-        logger.info({ url, symbols: this.symbols }, 'Connecting to Binance aggTrade for 1s candles...');
+
+        logger.info(
+          { url, symbols: this.symbols },
+          'Connecting to Binance aggTrade for 1s candles...',
+        );
 
         this.ws = new WebSocket(url);
 
         this.ws.on('open', () => {
           logger.info('✅ Connected to Binance aggTrade stream (1s candles)');
-          this.startCandleEmission();
           resolve();
         });
 
@@ -95,7 +95,6 @@ export class Binance1sClient {
           this.stopCandleEmission();
           this.scheduleReconnect();
         });
-
       } catch (error) {
         logger.error({ error }, 'Failed to connect');
         reject(error);
@@ -111,7 +110,7 @@ export class Binance1sClient {
       try {
         // Get current price from ticker API
         const response = await axios.get(`${this.apiUrl}/ticker/price`, {
-          params: { symbol }
+          params: { symbol },
         });
 
         const price = parseFloat(response.data.price);
@@ -144,7 +143,6 @@ export class Binance1sClient {
     const timestamp = message.T;
 
     if (!this.aggregators[symbol]) {
-      // Initialize if missing
       this.aggregators[symbol] = {
         open: price,
         high: price,
@@ -161,12 +159,9 @@ export class Binance1sClient {
     const agg = this.aggregators[symbol];
     const currentWindow = Math.floor(timestamp / 1000) * 1000;
 
-    // Check if we moved to a new second
     if (currentWindow > agg.openTime) {
-      // Emit completed candle
       this.emitCompletedCandle(symbol, agg);
 
-      // Start new candle
       this.aggregators[symbol] = {
         open: price,
         high: price,
@@ -178,7 +173,6 @@ export class Binance1sClient {
         trades: 1,
       };
     } else {
-      // Update current candle
       agg.high = Math.max(agg.high, price);
       agg.low = Math.min(agg.low, price);
       agg.close = price;
@@ -186,17 +180,32 @@ export class Binance1sClient {
       agg.quoteVolume += price * quantity;
       agg.trades += 1;
     }
+
+    if (this.onCandleCallback) {
+      this.onCandleCallback({
+        symbol,
+        timestamp: Date.now(),
+        open: this.aggregators[symbol].open,
+        high: this.aggregators[symbol].high,
+        low: this.aggregators[symbol].low,
+        close: price, 
+        volume: this.aggregators[symbol].volume,
+        quoteVolume: this.aggregators[symbol].quoteVolume,
+        openTime: this.aggregators[symbol].openTime,
+        closeTime: this.aggregators[symbol].openTime + 999,
+        trades: this.aggregators[symbol].trades,
+      });
+    }
   }
 
   private startCandleEmission(): void {
     // Emit current candle state every 1 second
     this.emitInterval = setInterval(() => {
       const now = Date.now();
-      
-      Object.keys(this.aggregators).forEach(symbol => {
+
+      Object.keys(this.aggregators).forEach((symbol) => {
         const agg = this.aggregators[symbol];
-        
-        // Emit current (incomplete) candle
+
         this.emitCurrentCandle(symbol, agg, now);
       });
     }, 1000);
@@ -216,7 +225,7 @@ export class Binance1sClient {
 
     const candle: Candle1s = {
       symbol,
-      timestamp: agg.openTime + 999, // End of the second
+      timestamp: agg.openTime + 999, 
       open: agg.open,
       high: agg.high,
       low: agg.low,
@@ -262,28 +271,28 @@ export class Binance1sClient {
 
     this.reconnectTimeout = setTimeout(() => {
       logger.info('Attempting to reconnect...');
-      this.connect().catch(error => {
+      this.connect().catch((error) => {
         logger.error({ error }, 'Reconnection failed');
         this.scheduleReconnect();
       });
     }, 5000);
   }
 
-  async getHistoricalData(symbol: string, limit: number = 60): Promise<Candle1s[]> {
+  async getHistoricalData(
+    symbol: string,
+    limit: number = 60,
+  ): Promise<Candle1s[]> {
     try {
-      // Get 1m candles and convert to 1s candles (simulated)
-      // Note: Binance doesn't have real 1s historical data
       const response = await axios.get(`${this.apiUrl}/klines`, {
         params: {
           symbol,
           interval: '1m',
           limit: Math.min(limit, 1000),
-        }
+        },
       });
 
       const candles: Candle1s[] = [];
-      
-      // Convert each 1m candle to 60x 1s candles (with interpolation)
+
       response.data.forEach((kline: any[]) => {
         const [openTime, open, high, low, close, volume] = kline;
         const o = parseFloat(open);
@@ -292,39 +301,35 @@ export class Binance1sClient {
         const c = parseFloat(close);
         const v = parseFloat(volume);
 
-        // Create 60 1-second candles from 1-minute data
-        // This is simulated - prices are interpolated
         for (let i = 0; i < 60; i++) {
-        const ratio = i / 60;
-        const basePrice = o + (c - o) * ratio;
-        
-        // Add realistic price variation (±0.01% to ±0.05%)
-        const variation = (Math.random() - 0.5) * basePrice * 0.0005;
-        const open = i === 0 ? o : candles[candles.length - 1].close;
-        const close = basePrice + variation;
-        
-        // High/low with some spread
-        const spread = Math.abs(close - open) * (1 + Math.random());
-        const high = Math.max(open, close) + spread * 0.5;
-        const low = Math.min(open, close) - spread * 0.5;
-        
-        candles.push({
+          const ratio = i / 60;
+          const basePrice = o + (c - o) * ratio;
+
+          const variation = (Math.random() - 0.5) * basePrice * 0.0005;
+          const open = i === 0 ? o : candles[candles.length - 1].close;
+          const close = basePrice + variation;
+
+          const spread = Math.abs(close - open) * (1 + Math.random());
+          const high = Math.max(open, close) + spread * 0.5;
+          const low = Math.min(open, close) - spread * 0.5;
+
+          candles.push({
             symbol,
-            timestamp: openTime + (i * 1000) + 999,
+            timestamp: openTime + i * 1000 + 999,
             open,
             high,
             low,
             close,
             volume: v / 60,
             quoteVolume: (v * close) / 60,
-            openTime: openTime + (i * 1000),
-            closeTime: openTime + (i * 1000) + 999,
+            openTime: openTime + i * 1000,
+            closeTime: openTime + i * 1000 + 999,
             trades: Math.floor(Math.random() * 20) + 5,
-        });
+          });
         }
       });
 
-      return candles.slice(-limit); // Return only requested amount
+      return candles.slice(-limit);
     } catch (error) {
       logger.error({ error, symbol }, 'Failed to get historical 1s data');
       return [];
@@ -333,7 +338,7 @@ export class Binance1sClient {
 
   async close(): Promise<void> {
     this.stopCandleEmission();
-    
+
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
     }

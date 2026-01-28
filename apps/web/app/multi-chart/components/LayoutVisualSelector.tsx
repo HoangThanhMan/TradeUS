@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LayoutType } from '../../types/layout.types';
+import { LayoutType } from '../../../src/types/layout.types';
 
 interface LayoutVisualSelectorProps {
   availableLayouts: LayoutType[];
@@ -9,11 +9,20 @@ interface LayoutVisualSelectorProps {
   onLayoutChange: (layout: LayoutType) => void;
 }
 
-const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }> = {
+const LAYOUT_ICONS: Record<
+  LayoutType,
+  { icon: React.ReactNode; label: string }
+> = {
   '1x1': {
     label: 'Single',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="5" y="5" width="30" height="30" rx="2" />
       </svg>
     ),
@@ -21,7 +30,13 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   '1x2': {
     label: 'Side by Side',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="5" y="8" width="12" height="24" rx="2" />
         <rect x="23" y="8" width="12" height="24" rx="2" />
       </svg>
@@ -30,7 +45,13 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   '2x1': {
     label: 'Top & Bottom',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="8" y="5" width="24" height="12" rx="2" />
         <rect x="8" y="23" width="24" height="12" rx="2" />
       </svg>
@@ -39,7 +60,13 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   '2top-1bottom': {
     label: '2 Top, 1 Bottom',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="5" y="5" width="12" height="12" rx="2" />
         <rect x="23" y="5" width="12" height="12" rx="2" />
         <rect x="5" y="23" width="30" height="12" rx="2" />
@@ -49,7 +76,13 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   '1top-2bottom': {
     label: '1 Top, 2 Bottom',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="5" y="5" width="30" height="12" rx="2" />
         <rect x="5" y="23" width="12" height="12" rx="2" />
         <rect x="23" y="23" width="12" height="12" rx="2" />
@@ -59,7 +92,13 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   '2x2': {
     label: '2x2 Grid',
     icon: (
-      <svg className="w-8 h-8" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        className="w-8 h-8"
+        viewBox="0 0 40 40"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <rect x="5" y="5" width="12" height="12" rx="2" />
         <rect x="23" y="5" width="12" height="12" rx="2" />
         <rect x="5" y="23" width="12" height="12" rx="2" />
@@ -69,7 +108,11 @@ const LAYOUT_ICONS: Record<LayoutType, { icon: React.ReactNode; label: string }>
   },
 };
 
-export function LayoutVisualSelector({ availableLayouts, currentLayout, onLayoutChange }: LayoutVisualSelectorProps) {
+export function LayoutVisualSelector({
+  availableLayouts,
+  currentLayout,
+  onLayoutChange,
+}: LayoutVisualSelectorProps) {
   if (availableLayouts.length <= 1) {
     return null; // Don't show selector if only one option
   }
