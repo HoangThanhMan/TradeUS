@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  console.log('🔑 Gateway JWT_SECRET:', (process.env.JWT_SECRET || '').substring(0, 3));
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 

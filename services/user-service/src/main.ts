@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  console.log('🔑 User Service JWT_SECRET:', (process.env.JWT_SECRET || '').substring(0, 3));
   const logger = new Logger('Bootstrap');
 
   app.useGlobalPipes(

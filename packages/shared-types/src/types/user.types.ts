@@ -4,6 +4,18 @@ export enum UserRole {
   ADMIN = 'admin',
 }
 
+export enum VipStatus {
+  NONE = 'NONE',
+  PENDING = 'PENDING', // Đã thanh toán, chờ Admin duyệt
+  ACTIVE = 'ACTIVE',   // Đã duyệt, đang là VIP
+  EXPIRED = 'EXPIRED'  // Hết hạn
+}
+
+export enum VipPlan {
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY'
+}
+
 export interface IUser {
   _id?: string;
   username: string;
@@ -11,6 +23,8 @@ export interface IUser {
   password: string;
   name?: string;
   role: UserRole;
+  vipStatus?: VipStatus;
+  vipPlan?: VipPlan;
   vipExpiry?: Date;
   createdAt: Date;
   updatedAt?: Date;

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { IUser, UserRole } from '@tradex/shared-types';
+import { IUser, UserRole, VipStatus, VipPlan } from '@tradex/shared-types';
 
 export type UserDocument = User & Document;
 
@@ -21,15 +21,29 @@ export class User implements IUser {
   @Prop({ trim: true })
   name?: string;
 
-  @Prop()
-  vipExpiry?: Date;
-
   @Prop({
     required: true,
     enum: UserRole,
     default: UserRole.USER,
   })
   role!: UserRole;
+
+  @Prop({
+    enum: VipStatus,
+    default: VipStatus.NONE,
+  })
+  vipStatus?: VipStatus;
+
+  @Prop({
+    enum: VipPlan,
+  })
+  vipPlan?: VipPlan;
+
+  @Prop()
+  vipExpiry?: Date;
+
+  @Prop()
+  vipRequestedAt?: Date;
 
   _id?: string;
   createdAt!: Date;
@@ -41,6 +55,7 @@ export const userSchema = SchemaFactory.createForClass(User);
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ username: 1 }, { unique: true });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ vipStatus: 1 });
 
 userSchema.virtual('id').get(function (this: UserDocument) {
   return this._id.toHexString();

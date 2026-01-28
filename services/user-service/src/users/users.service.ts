@@ -12,6 +12,7 @@ import {
   UpdateUserDto,
   ChangePasswordDto,
   UserRole,
+  VipStatus,
 } from '@tradex/shared-types';
 import { PasswordService } from '@tradex/auth-shared';
 
@@ -56,7 +57,8 @@ export class UsersService {
       password: hashedPassword,
       username: createUserDto.username,
       name: createUserDto.name,
-      role: (createUserDto.role as UserRole) || UserRole.USER,
+      role: UserRole.USER,
+      vipStatus: VipStatus.NONE,
     } as any);
 
     return this.excludePassword(user);
@@ -254,6 +256,7 @@ export class UsersService {
     const updatedUser = await this.usersRepository.findByIdAndUpdate(id, {
       $set: {
         role: UserRole.VIP,
+        vipStatus: VipStatus.ACTIVE,
         vipExpiry: vipExpiry,
       },
     });

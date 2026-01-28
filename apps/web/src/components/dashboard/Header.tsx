@@ -1,12 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ConnectionStatus } from '../../types/trading.types';
 import { NavigationMenu } from './NavigationMenu';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { UserRole } from '@tradex/shared-types';
 
 interface HeaderProps {
   status: ConnectionStatus;
+}
+
+interface UserData {
+  username?: string;
+  email?: string;
+  role?: UserRole;
+  vipStatus?: string;
 }
 
 const pjs = Plus_Jakarta_Sans({ 
@@ -15,13 +24,49 @@ const pjs = Plus_Jakarta_Sans({
 });
 
 export function Header({ status }: HeaderProps) {
+  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Load user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        console.error('Failed to parse user data');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/auth');
+  };
+
+  const isAdmin = user?.role === UserRole.ADMIN;
+
   return (
     <div className="bg-gray-50/80 backdrop-blur border-b border-gray-200 shadow-md shadow-black/5">
       <div className="flex items-center justify-between px-6 py-1.5">
         {/* Left: Logo & Navigation */}
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <div className="font-semibold tracking-tight">
+          <div className="font-semibold tracking-tight cursor-pointer" onClick={() => router.push('/dashboard')}>
             <span className="text-gray-900 text-2xl">Trade</span>
             <span className="bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent font-bold text-3xl">
               X
@@ -58,39 +103,92 @@ export function Header({ status }: HeaderProps) {
           {/* Navigation Tabs */}
           <NavigationMenu />
 
-          <button
-            className={`
-              ${pjs.className}
-              px-4 py-1.5 text-xs font-semibold rounded-full transition-all
-              bg-red-500 text-white
-              shadow-lg shadow-red-500/30
-              hover:bg-red-600 hover:shadow-red-500/40
-              active:scale-[0.98]
-            `}
-          >
-            Admin Panel
-          </button>
+          {/* Admin Panel Button - Only for Admin */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push('/admin')}
+              className={`
+                ${pjs.className}
+                px-4 py-1.5 text-xs font-semibold rounded-full transition-all
+                bg-red-500 text-white
+                shadow-lg shadow-red-500/30
+                hover:bg-red-600 hover:shadow-red-500/40
+                active:scale-[0.98]
+              `}
+            >
+              Admin Panel
+            </button>
+          )}
 
           <div className="mx-2 h-5 w-px bg-gray-300/70" />
 
           {/* User Dropdown */}
-          <button className={`${pjs.className} flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900`}>
-            <span>Welcome,</span>
-            <span className="font-bold">admin</span>
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setShowDropdown(!showDropdown)}
+              className={`${pjs.className} flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
+              <span>Welcome,</span>
+              <span className="font-bold">{user?.username || user?.email || 'User'}</span>
+              <svg
+                className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-xs text-gray-500">Signed in as</p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {user?.email}
+                  </p>
+                  {user?.role && (
+                    <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                      user.role === UserRole.ADMIN 
+                        ? 'bg-red-100 text-red-700'
+                        : user.role === UserRole.VIP
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {user.role.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                
+                {!isAdmin && user?.vipStatus !== 'ACTIVE' && (
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      router.push('/vip-register');
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    Upgrade to VIP
+                  </button>
+                )}
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Dùng router của Next.js 13+
-import Globe from '../../src/components/Globe'; // Đảm bảo đường dẫn import Globe đúng với project của bạn
-import { authService } from '../../src/services/auth.service'; // Import service vừa tạo
+import { useRouter } from 'next/navigation';
+import Globe from '../../src/components/Globe';
+import { authService } from '../../src/services/auth.service';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -15,18 +17,18 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
 
-  const [isLoading, setIsLoading] = useState(false); // Hiệu ứng loading
-  const [error, setError] = useState(''); // Hiển thị lỗi
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const toggle = () => {
     setMode((m) => (m === 'sign-in' ? 'sign-up' : 'sign-in'));
-    setError(''); // Xóa lỗi khi chuyển tab
+    setError('');
   };
 
   // Prefill dữ liệu demo
   useEffect(() => {
     if (mode === 'sign-in') {
-      setEmail('admin@cryptotrading.com');
+      setEmail('admin@tradex.com');
       setPassword('');
     } else {
       setUsername('');
@@ -45,27 +47,37 @@ export default function AuthPage() {
     try {
       if (mode === 'sign-in') {
         // --- Xử lý Đăng Nhập ---
-        await authService.login(email, password);
-        const response = await fetch('http://localhost:3001/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      if (response.ok) {
-        const data = await response.json();
+        const loginResponse = await authService.login(email, password);
         
-        // Lưu token vào localStorage
-        localStorage.setItem('token', data.token);
-        
-        alert('Login successfully ^.^');
+        // Lưu token (authService đã lưu accessToken, nhưng cũng lưu vào 'token' cho backward compatibility)
+        if (loginResponse.accessToken) {
+          localStorage.setItem('token', loginResponse.accessToken);
+        }
+
+        // Fetch user profile để lấy thông tin role
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        if (token) {
+          try {
+            const profileResponse = await fetch(`${API_URL}/users/profile`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (profileResponse.ok) {
+              const userData = await profileResponse.json();
+              // Lưu user data vào localStorage
+              localStorage.setItem('user', JSON.stringify(userData));
+            }
+          } catch (profileErr) {
+            console.warn('Could not fetch user profile:', profileErr);
+          }
+        }
+
         // Redirect to dashboard
         router.push('/dashboard');
-      } else {
-        alert('Login failed!');
-      }        // Chuyển hướng sau khi login thành công (ví dụ về trang Dashboard)
-        // router.push('/dashboard');
+        
       } else {
         // --- Xử lý Đăng Ký ---
         if (password !== confirm) {
@@ -75,12 +87,13 @@ export default function AuthPage() {
         }
         await authService.register(email, password, username);
         alert('Registration Successful! Please login.');
-        setMode('sign-in'); // Chuyển về tab login
+        setMode('sign-in');
       }
     } catch (err: any) {
       // Hiển thị lỗi từ Backend trả về
-      console.error(err);
-      setError(err.message || 'Something went wrong. Please try again.');
+      console.error('Auth error:', err);
+      const errorMessage = err?.message || err?.error || 'Something went wrong. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -152,17 +165,15 @@ export default function AuthPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Email Address
+                    Email
                   </label>
                   <input
                     type="email"
-                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`${inputBase} ${email ? 'input-filled' : 'bg-gray-50'} text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-200`}
-                    placeholder={
-                      mode === 'sign-in' ? 'Email address' : 'Enter your email'
-                    }
+                    required
+                    className={`${inputBase} ${email ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
+                    placeholder="you@example.com"
                   />
                 </div>
 
@@ -172,87 +183,69 @@ export default function AuthPage() {
                   </label>
                   <input
                     type="password"
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`${inputBase} ${password ? 'input-filled' : 'bg-gray-50'} text-gray-900 placeholder-gray-400  focus:ring-2 focus:ring-indigo-200`}
-                    placeholder="Your password"
+                    required
+                    className={`${inputBase} ${password ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
+                    placeholder="••••••••"
                   />
                 </div>
 
                 {mode === 'sign-up' && (
                   <div>
-                    <label className="block text-xs font-medium text-black-700 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Confirm Password
                     </label>
                     <input
                       type="password"
-                      required
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
+                      required
                       className={`${inputBase} ${confirm ? 'input-filled' : 'bg-gray-50'} focus:ring-2 focus:ring-indigo-200`}
-                      placeholder="Confirm your password"
+                      placeholder="••••••••"
                     />
                   </div>
                 )}
 
-                <div>
-                  <button
-                    disabled={isLoading}
-                    className={`w-full bg-[#0b1720] text-white py-3 rounded-md shadow-md transition-transform active:scale-99 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-95'}`}
-                  >
-                    {isLoading
-                      ? 'Processing...'
-                      : mode === 'sign-in'
-                        ? 'Sign In'
-                        : 'Create Account'}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 mt-4 rounded-md text-sm font-semibold text-white bg-black hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {mode === 'sign-in' ? 'Signing in...' : 'Creating account...'}
+                    </>
+                  ) : (
+                    mode === 'sign-in' ? 'Sign In' : 'Create Account'
+                  )}
+                </button>
               </form>
 
-              <div className="text-center text-sm text-gray-500 mt-6">
+              <p className="mt-6 text-center text-sm text-gray-500">
                 {mode === 'sign-in' ? (
                   <>
-                    Don&apos;t have an account?{' '}
-                    <button
-                      className="text-indigo-700 underline"
-                      onClick={toggle}
-                    >
-                      Sign up here
+                    Don't have an account?{' '}
+                    <button onClick={toggle} className="text-black font-semibold hover:underline">
+                      Sign up
                     </button>
                   </>
                 ) : (
                   <>
                     Already have an account?{' '}
-                    <button
-                      className="text-indigo-700 underline"
-                      onClick={toggle}
-                    >
-                      Sign in here
+                    <button onClick={toggle} className="text-black font-semibold hover:underline">
+                      Sign in
                     </button>
                   </>
                 )}
-              </div>
+              </p>
             </div>
           </div>
 
-          {/* Right: dark panel */}
-          <div className="md:w-1/2 bg-[#0b0f16] text-white p-10 flex flex-col items-center justify-center globe-glow fade-in-up">
-            <div className="w-56 h-56 mb-6 relative">
-              {/* WebGL globe (three.js) */}
-              <div className="absolute inset-0 rounded-full overflow-hidden">
-                <Globe />
-              </div>
-              <div className="globe-shine" aria-hidden="true" />
-              <div className="globe-shadow" aria-hidden="true" />
-            </div>
-
-            <h3 className="text-xl font-bold mb-2">TradeX Platform</h3>
-            <p className="text-sm text-gray-300 text-center max-w-xs">
-              Real-time crypto trading, AI-powered backtesting, and global
-              market analytics. Join thousands of traders worldwide. Fast,
-              secure, and easy to use.
-            </p>
+          {/* Right: Globe */}
+          <div className="md:w-1/2 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-8">
+            <Globe />
           </div>
         </div>
       </main>

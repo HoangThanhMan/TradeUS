@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -13,14 +14,13 @@ import { UsersModule } from './users/users.module';
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        uri:
-          configService.get<string>('MONGODB_URI') ||
-          'mongodb://localhost:27017/tradex',
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/tradex',
       }),
       inject: [ConfigService],
     }),
     UsersModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
