@@ -51,9 +51,9 @@ class Settings(BaseSettings):
     mongodb_database: str = "tradex_sentiment"
 
     # Google Gemini API configuration
-    gemini_api_key: str = ""
+    gemini_api_key: str = "AIzaSyBWl1jgOBVNrJBPXH9rxichgx3KC8WHTYk"
     gemini_model: str = "gemini-1.5-flash"
-    use_mock_llm: bool = True  # Set to False to use real Gemini API
+    use_mock_llm: bool = False  # Set to False to use real Gemini API
 
     # Reddit API configuration (for data collection)
     reddit_client_id: str = ""
@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # Yahoo Finance configuration
     yahoo_symbols: str = "BTC-USD,ETH-USD,BNB-USD,SOL-USD,XRP-USD"
     yahoo_news_limit: int = 10
+
+    # Scheduler configuration
+    enable_scheduler: bool = True  # Enable/disable automatic news collection
+    collection_interval_seconds: int = 300  # 5 minutes (5 * 60 seconds)
+    collection_limit: int = 10  # Number of items to collect per source
+    collection_analyze_immediately: bool = True  # Analyze news immediately after collection
 
     @property
     def reddit_subreddits_list(self) -> list[str]:

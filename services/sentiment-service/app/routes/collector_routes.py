@@ -1,15 +1,10 @@
-"""
-API routes for data collection endpoints.
-Provides endpoints to trigger and manage news collection from various sources.
-"""
-
 import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.collectors.reddit_collector import MockRedditCollector, RedditCollector
-from app.collectors.yahoo_collector import MockYahooCollector, YahooCollector
+from app.collectors.reddit_collector import RedditCollector
+from app.collectors.yahoo_collector import YahooCollector
 from app.config import settings
 from app.models.schemas import (
     CollectionResult,
@@ -24,22 +19,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/collect", tags=["Data Collection"])
 
 
-def get_reddit_collector() -> RedditCollector:
+def get_reddit_collector():
     """Get appropriate Reddit collector based on configuration."""
     if settings.reddit_client_id and settings.reddit_client_secret:
         return RedditCollector()
-    logger.info("Reddit credentials not configured, using mock collector")
-    return MockRedditCollector()
+    logger.info("Reddit credentials not configured")
 
 
-def get_yahoo_collector() -> YahooCollector:
-    """Get appropriate Yahoo collector (with fallback to mock)."""
+def get_yahoo_collector():
+    """Get appropriate Yahoo collector."""
     try:
         import yfinance
         return YahooCollector()
     except ImportError:
         logger.info("yfinance not installed, using mock collector")
-        return MockYahooCollector()
 
 
 @router.post(
@@ -56,21 +49,7 @@ def get_yahoo_collector() -> YahooCollector:
 async def collect_reddit_posts(
     request: RedditCollectionRequest = RedditCollectionRequest()
 ) -> CollectionResult:
-    """
-    Collect posts from cryptocurrency subreddits on Reddit.
-    
-    **Features:**
-    - Collects from configured subreddits (or specify custom ones)
-    - Filters by time period (hour, day, week, month, year, all)
-    - Optionally analyzes sentiment immediately
-    - Stores collected posts in MongoDB
-    
-    **Request Body:**
-    - **subreddits**: Optional list of subreddits to collect from
-    - **time_filter**: Time filter (default: "day")
-    - **limit**: Max posts per subreddit
-    - **analyze_immediately**: Auto-analyze collected posts
-    """
+    """Collect posts from cryptocurrency subreddits on Reddit."""
     try:
         collector = get_reddit_collector()
         
@@ -118,20 +97,7 @@ async def collect_reddit_posts(
 async def collect_yahoo_news(
     request: YahooCollectionRequest = YahooCollectionRequest()
 ) -> CollectionResult:
-    """
-    Collect cryptocurrency news from Yahoo Finance.
-    
-    **Features:**
-    - Collects news for configured symbols (or specify custom ones)
-    - Includes metadata like publisher, thumbnails
-    - Optionally analyzes sentiment immediately
-    - Stores collected news in MongoDB
-    
-    **Request Body:**
-    - **symbols**: Optional list of Yahoo symbols (e.g., BTC-USD)
-    - **limit**: Max news items per symbol
-    - **analyze_immediately**: Auto-analyze collected news
-    """
+    """Collect cryptocurrency news from Yahoo Finance."""
     try:
         collector = get_yahoo_collector()
         
@@ -175,13 +141,7 @@ async def collect_all_sources(
     analyze_immediately: bool = True,
     limit: int = 10,
 ) -> dict[str, Any]:
-    """
-    Collect news from all available sources.
-    
-    **Query Parameters:**
-    - **analyze_immediately**: Auto-analyze collected news (default: true)
-    - **limit**: Max items per source/symbol/subreddit (default: 10)
-    """
+    """Collect news from all available sources."""
     results = {}
     
     # Collect from Reddit
@@ -242,13 +202,7 @@ async def get_pending_news(
     source: DataSourceType | None = None,
     limit: int = 20,
 ) -> dict[str, Any]:
-    """
-    Get news items that are pending sentiment analysis.
-    
-    **Query Parameters:**
-    - **source**: Filter by source (reddit, yahoo)
-    - **limit**: Max items to return (default: 20)
-    """
+    """Get news items that are pending sentiment analysis."""
     from app.database import Database
     
     try:
@@ -296,13 +250,7 @@ async def analyze_pending_news(
     source: DataSourceType | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
-    """
-    Analyze pending news items that haven't been processed yet.
-    
-    **Query Parameters:**
-    - **source**: Filter by source (reddit, yahoo)
-    - **limit**: Max items to analyze (default: 10)
-    """
+    """Analyze pending news items that haven't been processed yet."""
     try:
         analyzed_count = await _analyze_collected_news(source, limit)
         
@@ -387,16 +335,7 @@ async def _analyze_collected_news(
     source: DataSourceType | None,
     limit: int,
 ) -> int:
-    """
-    Internal helper to analyze collected news items.
-    
-    Args:
-        source: Optional source filter.
-        limit: Maximum items to analyze.
-        
-    Returns:
-        Number of items successfully analyzed.
-    """
+    """Internal helper to analyze collected news items."""
     from bson import ObjectId
     from app.database import Database
     from app.models.schemas import NewsInput

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class RedditCollector:
 
-    def __init__(self) -> None:
+    def __init__(self):
         self._reddit = None
         self._initialized = False
 
@@ -43,22 +43,20 @@ class RedditCollector:
             return self._reddit
 
         except ImportError:
-            raise RuntimeError(
-                "PRAW library not installed. Run: pip install praw"
-            )
+            raise RuntimeError("PRAW library not installed. Run: pip install praw")
 
     async def collect_posts(
         self,
-        subreddits: Optional[list[str]] = None,
-        limit: Optional[int] = None,
-        time_filter: str = "day",
-    ) -> list[RedditPost]:
+        subreddits = None,
+        limit = None,
+        time_filter = "day",
+    ):
         reddit = await self._get_reddit_client()
         
         subreddits = subreddits or settings.reddit_subreddits_list
         limit = limit or settings.reddit_post_limit
         
-        collected_posts: list[RedditPost] = []
+        collected_posts = []
         
         for subreddit_name in subreddits:
             try:
@@ -84,10 +82,10 @@ class RedditCollector:
     def _fetch_subreddit_posts(
         self,
         reddit,
-        subreddit_name: str,
-        limit: int,
-        time_filter: str,
-    ) -> list[RedditPost]:
+        subreddit_name,
+        limit,
+        time_filter,
+    ):
         posts = []
         subreddit = reddit.subreddit(subreddit_name)
         
@@ -123,15 +121,15 @@ class RedditCollector:
 
     async def collect_and_store(
         self,
-        subreddits: Optional[list[str]] = None,
-        limit: Optional[int] = None,
-        time_filter: str = "day",
-    ) -> CollectionResult:
+        subreddits = None,
+        limit = None,
+        time_filter = "day",
+    ):
         import time
         from app.database import Database
         
         start_time = time.time()
-        errors: list[str] = []
+        errors = []
         new_count = 0
         
         try:
@@ -197,74 +195,6 @@ class RedditCollector:
                 duration_seconds=round(duration, 2)
             )
 
-    def is_configured(self) -> bool:
+    def is_configured(self):
         """Check if Reddit credentials are configured."""
         return bool(settings.reddit_client_id and settings.reddit_client_secret)
-
-
-# Mock collector for development without Reddit credentials
-class MockRedditCollector(RedditCollector):
-    """Mock Reddit collector for testing without API credentials."""
-
-    async def collect_posts(
-        self,
-        subreddits: Optional[list[str]] = None,
-        limit: Optional[int] = None,
-        time_filter: str = "day",
-    ) -> list[RedditPost]:
-        """Return mock Reddit posts for testing."""
-        from datetime import timedelta
-        import random
-        
-        mock_posts = [
-            {
-                "title": "Bitcoin breaks $100k! This is huge for crypto adoption",
-                "content": "After years of waiting, Bitcoin has finally broken the $100,000 barrier. Institutional investors are piling in and the future looks bright for cryptocurrency.",
-                "subreddit": "cryptocurrency",
-                "score": 15420,
-            },
-            {
-                "title": "Ethereum 2.0 staking rewards looking very promising",
-                "content": "The staking APY on ETH 2.0 is currently around 5%. With the merge complete, Ethereum is more energy efficient and sustainable than ever.",
-                "subreddit": "ethereum",
-                "score": 8750,
-            },
-            {
-                "title": "Warning: New phishing scam targeting crypto wallets",
-                "content": "Be careful! There's a new scam going around where fake wallet apps steal your seed phrases. Always download from official sources only.",
-                "subreddit": "cryptocurrency",
-                "score": 12300,
-            },
-            {
-                "title": "Solana network congestion causing transaction delays",
-                "content": "The Solana network is experiencing high congestion today. Transactions are taking longer than usual and fees have increased slightly.",
-                "subreddit": "solana",
-                "score": 3200,
-            },
-            {
-                "title": "BNB Chain announces major upgrade for Q1 2026",
-                "content": "Binance Smart Chain is getting a major performance upgrade that will increase TPS by 10x and reduce gas fees significantly.",
-                "subreddit": "binance",
-                "score": 5600,
-            },
-        ]
-        
-        posts = []
-        now = datetime.now(timezone.utc)
-        
-        for i, mock in enumerate(mock_posts[:limit or 5]):
-            posts.append(RedditPost(
-                post_id=f"mock_{i}_{int(now.timestamp())}",
-                subreddit=mock["subreddit"],
-                title=mock["title"],
-                content=mock["content"],
-                author=f"crypto_user_{random.randint(1000, 9999)}",
-                url=f"https://reddit.com/r/{mock['subreddit']}/comments/mock{i}",
-                score=mock["score"],
-                num_comments=random.randint(50, 500),
-                created_utc=now - timedelta(hours=random.randint(1, 24)),
-                flair="Discussion",
-            ))
-        
-        logger.info(f"Generated {len(posts)} mock Reddit posts")
-        return posts

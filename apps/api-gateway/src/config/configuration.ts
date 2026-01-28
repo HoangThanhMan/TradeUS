@@ -1,5 +1,5 @@
 export default () => ({
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '3001', 10),
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',

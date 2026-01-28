@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PriceGatewayModule } from './gateway/price-gateway.module';
+import { SentimentGatewayModule } from './gateway/sentiment-gateway.module';
 import { RabbitMQModule } from './rabbitmq/rabbitmq.module';
 import { HealthModule } from './health/health.module';
 import configuration from './config/configuration';
@@ -13,6 +14,7 @@ import configuration from './config/configuration';
     }),
     RabbitMQModule,
     PriceGatewayModule,
+    SentimentGatewayModule,
     HealthModule,
   ],
 })

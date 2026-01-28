@@ -8,6 +8,7 @@ import { ProxyModule } from './proxy/proxy.module';
 import { JwtAuthGuard } from '@tradex/auth-shared';
 import configuration from './config/configuration';
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({

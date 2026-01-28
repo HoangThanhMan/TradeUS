@@ -94,43 +94,87 @@ services:
     networks:
       - tradex-network
 
-#   # =============================================================================
-#   # AI/ML Services
-#   # =============================================================================
+  # =============================================================================
+  # AI/ML Services
+  # =============================================================================
 
-#   # Sentiment Analysis Service
-#   sentiment-service:
-#     build:
-#       context: ./services/sentiment-service
-#       dockerfile: Dockerfile
-#     container_name: tradex-sentiment-service
-#     restart: unless-stopped
-#     ports:
-#       - "8001:8001"
-#     environment:
-#       ENVIRONMENT: development
-#       HOST: 0.0.0.0
-#       PORT: 8001
-#       LOG_LEVEL: INFO
-#       CORS_ORIGINS: "*"
-#       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-#       REDIS_URL: redis://redis:6379
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       redis:
-#         condition: service_healthy
-#     healthcheck:
-#       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
-#       interval: 30s
-#       timeout: 10s
-#       retries: 3
-#     networks:
-#       - tradex-network0
+  # Sentiment Analysis Service
+  sentiment-service:
+    build:
+      context: ./services/sentiment-service
+      dockerfile: Dockerfile
+    container_name: tradex-sentiment-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      ENVIRONMENT: development
+      HOST: 0.0.0.0
+      PORT: 8001
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: "*"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      MONGODB_URL: mongodb://admin:password@mongodb:27017
+      MONGODB_DATABASE: tradex_sentiment
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - tradex-network
 
-#   # =============================================================================
-#   # Backend Services (Uncomment when ready)
-#   # =============================================================================
+  # Prediction Service - LSTM Price Prediction
+  prediction-service:
+    build:
+      context: ./services/prediction-service
+      dockerfile: Dockerfile
+    container_name: tradex-prediction-service
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      ENVIRONMENT: development
+      HOST: 0.0.0.0
+      PORT: 8002
+      LOG_LEVEL: INFO
+      CORS_ORIGINS: "*"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      MONGODB_URL: mongodb://admin:password@mongodb:27017
+      MONGODB_DATABASE: tradex_predictions
+      SENTIMENT_SERVICE_URL: http://sentiment-service:8001
+      MODEL_PATH: models/crypto_predictor_btcusdt.pt
+    volumes:
+      - ./services/prediction-service/models:/app/models:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      sentiment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8002/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - tradex-network
+
+  # =============================================================================
+  # Backend Services
+  # =============================================================================
 
   # API Gateway
   api-gateway:
@@ -146,6 +190,9 @@ services:
       MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      USER_SERVICE_URL: http://user-service:3000
+      SENTIMENT_SERVICE_URL: http://sentiment-service:8001
+      PREDICTION_SERVICE_URL: http://prediction-service:8002
     depends_on:
       - mongodb
       - redis

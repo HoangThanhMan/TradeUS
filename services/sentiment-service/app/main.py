@@ -17,6 +17,7 @@ from app.config import settings
 from app.database import Database
 from app.health import router as health_router
 from app.routes import collector_router, sentiment_router
+from app.scheduler import get_scheduler
 
 
 def setup_logging() -> None:
@@ -74,10 +75,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if settings.environment == "production":
                 raise
 
+    # Initialize and start the collector scheduler
+    if settings.enable_scheduler:
+        try:
+            scheduler = await get_scheduler()
+            await scheduler.start()
+            logger.info(
+                f"Collector scheduler started. "
+                f"Interval: {settings.collection_interval_seconds}s "
+                f"({settings.collection_interval_seconds // 60} minutes)"
+            )
+        except Exception as e:
+            logger.error(f"Failed to start collector scheduler: {e}")
+            if settings.environment == "production":
+                raise
+
     yield
 
     # Shutdown
     logger.info(f"Shutting down {settings.service_name}")
+    
+    # Stop the collector scheduler
+    if settings.enable_scheduler:
+        try:
+            scheduler = await get_scheduler()
+            await scheduler.stop()
+            logger.info("Collector scheduler stopped")
+        except Exception as e:
+            logger.error(f"Error stopping collector scheduler: {e}")
     
     # Close RabbitMQ
     if settings.enable_rabbitmq:
@@ -173,8 +198,8 @@ async def info() -> dict[str, Any]:
             "ready": "/ready",
             "live": "/live",
             "docs": "/docs",
-            "sentiments": "/api/v1/sentiments",
-            "collect": "/api/v1/collect",
+            "sentiments": "/sentiments",
+            "collect": "/collect",
         },
     }
 

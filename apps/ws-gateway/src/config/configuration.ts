@@ -13,6 +13,17 @@ export default () => ({
       .replace(/^["']|["']$/g, '')
       .split(','),
   },
+
+  // Sentiment RabbitMQ configuration
+  sentiment: {
+    exchange: process.env.SENTIMENT_EXCHANGE || 'sentiment.exchange',
+    queuePrefix: process.env.SENTIMENT_QUEUE_PREFIX || 'ws-gateway.sentiment',
+    routingPatterns: (process.env.SENTIMENT_ROUTING_PATTERNS || 'sentiment.result.#,sentiment.alert.#,sentiment.batch.#')
+      .replace(/^["']|["']$/g, '')
+      .split(','),
+    // Sentiment service API URL for fetching historical data
+    serviceUrl: process.env.SENTIMENT_SERVICE_URL || 'http://localhost:8001',
+  },
   
   cors: {
     origins: (process.env.CORS_ORIGINS || 'http://localhost:3000').split(','),

@@ -27,6 +27,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^11.0.1",
+    "@tradex/auth-shared": "^1.0.0",
     "@tradex/shared-types": "^1.0.0",
     "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
