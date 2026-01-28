@@ -114,13 +114,13 @@ export function Sidebar({
                     transition-colors relative
                     ${
                       isActive(tool.id)
-                        ? 'bg-blue-500 text-white'
+                        ? 'text-black font-bold after:absolute after:left-0 after:top-1 after:bottom-1 after:w-0.5 after:bg-black'
                         : 'text-gray-600 hover:bg-gray-200'
                     }
                   `}
                   title={tool.label}
                 >
-                  <Icon size={21} strokeWidth={1.75} />
+                  <Icon size={18} strokeWidth={1.75} />
                 </button>
                 {tool.dividerAfter && <div className="my-1 w-8 h-px bg-gray-300" />}
               </React.Fragment>

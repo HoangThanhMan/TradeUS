@@ -20,7 +20,6 @@ export function useChartData(
   const [latestPrice, setLatestPrice] = useState<PriceMessage | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Reset data khi symbol hoặc interval thay đổi
   useEffect(() => {
     console.log('🔄 Resetting chart data for', symbol, interval);
     setCandles([]);
@@ -31,6 +30,8 @@ export function useChartData(
   // Auto-update candle hiện tại mỗi giây
   useEffect(() => {
     if (!latestPrice || candles.length === 0) return;
+
+    if (interval === '1d' || interval === '1w') return;
 
     const updateTimer = setInterval(() => {
       setCandles(prev => {
@@ -58,7 +59,6 @@ export function useChartData(
           console.log('⏱️ Timer update:', updatedCandle.close);
           return [...prev.slice(0, -1), updatedCandle];
         } else {
-          // Sang candle window mới → tạo candle mới
           const newCandle: CandlestickData = {
             time: Math.floor(now / intervalMs) * intervalMs,
             open: lastCandle.close,
