@@ -27,7 +27,7 @@ export const config: Config = {
   logLevel: process.env.LOG_LEVEL || 'info',
   binance: {
     wsUrl: process.env.BINANCE_WS_URL || 'wss://fstream.binance.com/stream',
-    symbols: (process.env.BINANCE_SYMBOLS || 'btcusdt,ethusdt').split(',').map(s => s.trim().toLowerCase()),
+    symbols: (process.env.BINANCE_SYMBOLS || 'btcusdt,ethusdt,bnbusdt,solusdt').split(',').map(s => s.trim().toLowerCase()),
     streamType: process.env.BINANCE_STREAM_TYPE || 'miniTicker',
   },
   rabbitmq: {

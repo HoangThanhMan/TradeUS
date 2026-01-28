@@ -61,9 +61,7 @@ export class BinanceKlineClient {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        // Build streams: btcusdt@kline_1m/btcusdt@kline_5m/ethusdt@kline_1m/...
         const streams: string[] = [];
-        
         this.symbols.forEach(symbol => {
           this.intervals.forEach(interval => {
             const stream = `${symbol.toLowerCase()}@kline_${interval}`;

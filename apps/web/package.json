@@ -12,7 +12,9 @@
   "dependencies": {
     "@react-three/drei": "^9.92.0",
     "@react-three/fiber": "^8.15.0",
+    "@tabler/icons-react": "^3.36.1",
     "klinecharts": "^9.8.5",
+    "lucide-react": "^0.563.0",
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -29,8 +31,8 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
+    "postcss": "^8.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "postcss": "^8.4.0"
+    "typescript": "^5"
   }
 }
