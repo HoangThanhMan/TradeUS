@@ -31,12 +31,19 @@ interface CandlestickData {
 interface KLineChartProps {
   candles: CandlestickData[];
   symbol: string;
+  chartType?: string;
   onVolPaneCreated?: (paneId: string) => void;
-  isLocked?: boolean; // 🔥 NEW: Lock prop
+  isLocked?: boolean;
 }
 
 export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
-  { candles, symbol, onVolPaneCreated, isLocked = false },
+  {
+    candles,
+    symbol,
+    chartType = 'candle_solid',
+    onVolPaneCreated,
+    isLocked = false,
+  },
   ref,
 ) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -45,31 +52,158 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
   const [volVisible, setVolVisible] = useState(true);
   const [showVolSettings, setShowVolSettings] = useState(false);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
-  
-  // 🔥 Track data when locked
+
   const lastDataCountRef = useRef<number>(0);
 
   useImperativeHandle(ref, () => chartInstance.current, [
     chartInstance.current,
   ]);
 
-  // 🔥 Effect to handle lock state changes
+  // 🔥 FIXED: Effect to update chart type with proper line chart handling
+  useEffect(() => {
+    if (!chartInstance.current || !chartReady) return;
+
+    console.log('🎨 Updating chart type to:', chartType);
+
+    try {
+      if (chartType === 'area') {
+        // 🔥 Line chart style (like Binance)
+        chartInstance.current.setStyles({
+          candle: {
+            type: 'area' as CandleType,
+            area: {
+              lineSize: 2,
+              lineColor: '#F0B90B', // Yellow like Binance
+              value: 'close',
+              backgroundColor: 'transparent', // No fill, just line
+              smooth: true,
+            },
+            priceMark: {
+              show: false, // Hide high/low marks for line chart
+            },
+            tooltip: {
+              showRule: 'always' as TooltipShowRule,
+              showType: 'standard' as TooltipShowType,
+              text: {
+                size: 12,
+                color: '#666666',
+              },
+            },
+          },
+        });
+      } else if (chartType === 'ohlc') {
+        // OHLC bars
+        chartInstance.current.setStyles({
+          candle: {
+            type: 'ohlc' as CandleType,
+            bar: {
+              upColor: '#0ecb81',
+              downColor: '#f6465d',
+              upBorderColor: '#0ecb81',
+              downBorderColor: '#f6465d',
+              upWickColor: '#0ecb81',
+              downWickColor: '#f6465d',
+              noChangeColor: '#888888',
+            },
+            priceMark: {
+              show: true,
+              high: {
+                show: true,
+                color: '#0ecb81',
+              },
+              low: {
+                show: true,
+                color: '#f6465d',
+              },
+            },
+            tooltip: {
+              showRule: 'always' as TooltipShowRule,
+              showType: 'standard' as TooltipShowType,
+              text: {
+                size: 12,
+                color: '#666666',
+              },
+            },
+          },
+        });
+      } else if (chartType === 'area_binance') {
+        // Hollow candles
+        chartInstance.current.setStyles({
+          candle: {
+            type: 'area',
+            area: {
+              value: 'close',
+              smooth: true,
+              lineSize: 2,
+              lineColor: '#F0B90B',
+              backgroundColor: 'rgba(240, 185, 11, 0.18)',
+            },
+            priceMark: { show: false },
+            tooltip: {
+              showRule: 'always' as TooltipShowRule,
+              showType: 'standard' as TooltipShowType,
+              text: {
+                size: 12,
+                color: '#666666',
+              },
+            },
+          },
+        });
+      } else {
+        // Default: candle_solid
+        chartInstance.current.setStyles({
+          candle: {
+            type: 'candle_solid' as CandleType,
+            bar: {
+              upColor: '#0ecb81',
+              downColor: '#f6465d',
+              upBorderColor: '#0ecb81',
+              downBorderColor: '#f6465d',
+              upWickColor: '#0ecb81',
+              downWickColor: '#f6465d',
+              noChangeColor: '#888888',
+            },
+            priceMark: {
+              show: true,
+              high: {
+                show: true,
+                color: '#0ecb81',
+              },
+              low: {
+                show: true,
+                color: '#f6465d',
+              },
+            },
+            tooltip: {
+              showRule: 'always' as TooltipShowRule,
+              showType: 'standard' as TooltipShowType,
+              text: {
+                size: 12,
+                color: '#666666',
+              },
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error updating chart type:', error);
+    }
+  }, [chartType, chartReady]);
+
   useEffect(() => {
     if (!chartInstance.current) return;
 
     console.log('🔒 Lock state changed:', isLocked);
-    
+
     if (isLocked) {
-      // When locking: save current data count to prevent new candles from showing
-      lastDataCountRef.current = chartInstance.current.getDataList()?.length || 0;
+      lastDataCountRef.current =
+        chartInstance.current.getDataList()?.length || 0;
       console.log('💾 Locked at', lastDataCountRef.current, 'candles');
     } else {
-      // When unlocking: reset so all data shows
       lastDataCountRef.current = 0;
       console.log('🔓 Unlocked - will show all data');
     }
-    
-    // Disable/enable scroll and zoom based on lock state
+
     chartInstance.current.setZoomEnabled(!isLocked);
     chartInstance.current.setScrollEnabled(!isLocked);
   }, [isLocked]);
@@ -92,7 +226,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
       chartInstance.current = init(chartRef.current, {
         styles: {
           candle: {
-            type: 'candle_solid' as CandleType,
+            type: chartType as CandleType,
             bar: {
               upColor: '#0ecb81',
               downColor: '#f6465d',
@@ -102,8 +236,15 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
               downWickColor: '#f6465d',
               noChangeColor: '#888888',
             },
+            area: {
+              lineSize: 2,
+              lineColor: '#F0B90B',
+              value: 'close',
+              backgroundColor: 'transparent',
+              smooth: true,
+            },
             priceMark: {
-              show: true,
+              show: chartType !== 'area', // Hide for line chart
               high: {
                 show: true,
                 color: '#0ecb81',
@@ -146,7 +287,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
               style: 'solid' as LineType,
             },
             vertical: {
-              show: false,
+              show: true,
             },
           },
           crosshair: {
@@ -215,7 +356,6 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
         locale: 'en-US',
       });
 
-      // 🔥 Set initial lock state
       chartInstance.current.setZoomEnabled(!isLocked);
       chartInstance.current.setScrollEnabled(!isLocked);
       chartInstance.current.setBarSpace(12);
@@ -245,7 +385,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           chartInstance.current.resize();
         }
       }, 10);
-      
+
       setChartReady(true);
       console.log('✅ Chart instance created successfully');
     } catch (error) {
@@ -298,15 +438,78 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
       const recentCandles = candles.slice(-1000);
 
       const formattedData = recentCandles
-        .filter((c) => c && c.time && !isNaN(c.open) && !isNaN(c.close))
-        .map((c) => ({
-          timestamp: c.time,
-          open: Number(c.open),
-          high: Number(c.high),
-          low: Number(c.low),
-          close: Number(c.close),
-          volume: Number(c.volume || 0),
-        }));
+        .filter((c) => {
+          if (!c || !c.time) return false;
+
+          const o = Number(c.open);
+          const h = Number(c.high);
+          const l = Number(c.low);
+          const cl = Number(c.close);
+
+          if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(cl)) return false;
+          if (!isFinite(o) || !isFinite(h) || !isFinite(l) || !isFinite(cl))
+            return false;
+          if (o <= 0 || h <= 0 || l <= 0 || cl <= 0) return false;
+
+          return true;
+        })
+        .map((c) => {
+          let o = Number(c.open);
+          let h = Number(c.high);
+          let l = Number(c.low);
+          let cl = Number(c.close);
+          let v = Math.max(0, Number(c.volume || 0));
+
+          const maxOC = Math.max(o, cl);
+          const minOC = Math.min(o, cl);
+
+          if (h < maxOC) {
+            h = maxOC;
+          }
+          if (l > minOC) {
+            l = minOC;
+          }
+
+          const priceRange = h - l;
+          const avgPrice = (o + cl) / 2;
+          const MIN_BODY_RATIO = 0.0000012;
+          const minBodySize = avgPrice * MIN_BODY_RATIO;
+          const currentBodySize = Math.abs(cl - o);
+
+          if (currentBodySize < minBodySize) {
+            if (cl >= o) {
+              cl = o + minBodySize;
+            } else {
+              cl = o - minBodySize;
+            }
+            h = Math.max(h, cl);
+            l = Math.min(l, cl);
+          }
+
+          if (priceRange > avgPrice * 1.0) {
+            console.warn('🔧 Extreme range detected - capping:', {
+              time: new Date(c.time).toISOString(),
+              oldRange: priceRange.toFixed(2),
+              percent: ((priceRange / avgPrice) * 100).toFixed(1) + '%',
+            });
+
+            const cappedRange = avgPrice * 0.2;
+            h = Math.min(h, avgPrice + cappedRange);
+            l = Math.max(l, avgPrice - cappedRange);
+
+            h = Math.max(h, maxOC);
+            l = Math.min(l, minOC);
+          }
+
+          return {
+            timestamp: c.time,
+            open: o,
+            high: h,
+            low: l,
+            close: cl,
+            volume: v,
+          };
+        });
 
       if (formattedData.length === 0) {
         console.error('❌ No valid formatted data!');
@@ -317,16 +520,24 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
         const currentDataCount = formattedData.length;
         const lockedDataCount = lastDataCountRef.current;
 
-        // 🔥 When locked: only show candles that existed when we locked
-        if (isLocked && lockedDataCount > 0 && currentDataCount > lockedDataCount) {
-          console.log('🔒 Chart locked - showing only', lockedDataCount, 'candles (ignoring', currentDataCount - lockedDataCount, 'new candles)');
-          
-          // Only show the locked number of candles
+        if (
+          isLocked &&
+          lockedDataCount > 0 &&
+          currentDataCount > lockedDataCount
+        ) {
+          console.log(
+            '🔒 Chart locked - showing only',
+            lockedDataCount,
+            'candles',
+          );
           const lockedData = formattedData.slice(0, lockedDataCount);
           chartInstance.current.applyNewData(lockedData);
         } else {
-          // Normal update when not locked
-          console.log('📊 Updating chart with', formattedData.length, 'candles');
+          console.log(
+            '📊 Updating chart with',
+            formattedData.length,
+            'candles',
+          );
           chartInstance.current.applyNewData(formattedData);
         }
 
@@ -561,23 +772,3 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
 });
 
 export default KLineChart;
-
-// 🔥 UPDATE ChartInstance.tsx - Add isLocked prop to KLineChart
-// In ChartInstance component, change:
-// <KLineChart 
-//   candles={candles} 
-//   symbol={config.symbol}
-//   ref={chartInstanceRef}
-//   onVolPaneCreated={setVolPaneId}
-//   isLocked={drawingState.drawingsLocked} // 🔥 ADD THIS
-// />
-
-// 🔥 UPDATE dashboard/page.tsx - Add isLocked prop to KLineChart
-// In DashboardPage component, change:
-// <KLineChart 
-//   candles={candles} 
-//   symbol={symbol}
-//   ref={chartInstanceRef} 
-//   onVolPaneCreated={setVolPaneId}
-//   isLocked={drawingState.drawingsLocked} // 🔥 ADD THIS
-// />

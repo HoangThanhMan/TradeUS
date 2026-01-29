@@ -9,9 +9,9 @@ interface HeaderProps {
   status: ConnectionStatus;
 }
 
-const pjs = Plus_Jakarta_Sans({ 
+const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['500', '600', '700'], 
+  weight: ['500', '600', '700'],
 });
 
 export function Header({ status }: HeaderProps) {
@@ -74,7 +74,9 @@ export function Header({ status }: HeaderProps) {
           <div className="mx-2 h-5 w-px bg-gray-300/70" />
 
           {/* User Dropdown */}
-          <button className={`${pjs.className} flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900`}>
+          <button
+            className={`${pjs.className} flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900`}
+          >
             <span>Welcome,</span>
             <span className="font-bold">admin</span>
             <svg

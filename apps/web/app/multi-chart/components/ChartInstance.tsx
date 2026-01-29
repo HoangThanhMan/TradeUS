@@ -1,22 +1,22 @@
-// src/components/chart/ChartInstance.tsx (Updated)
+// src/components/chart/ChartInstance.tsx (WITH SYMBOL SELECTOR)
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Socket } from 'socket.io-client';
-import { useChartData } from '../../hooks/useChartData';
-import { useDrawingManager } from '../../hooks/useDrawingManager';
-import { KLineChart } from './KLineChart';
-import { ChartToolbar } from './ChartToolbar';
-import { InfoBar } from './InfoBar';
-import { Sidebar } from '../dashboard/Sidebar';
-import { IndicatorManager } from './IndicatorManager';
-import { DrawingLayer } from './DrawingLayer';
-import { FreeDrawingCanvas } from './FreeDrawingCanvas';
-import { SimplePriceLevelLayer } from './SimplePriceLevelLayer';
-import { FibonacciRetracementLayer } from './FibonacciRetracementLayer';
-import { ChartConfig } from '../../types/layout.types';
+import { useChartData } from '../../../src/hooks/useChartData';
+import { useDrawingManager } from '../../../src/hooks/useDrawingManager';
+import { KLineChart } from '../../../src/components/chart-tools/KLineChart';
+import { ChartToolbar } from '../../../src/components/toolbars/ChartToolbar';
+import { InfoBar } from '../../../src/components/toolbars/InfoBar';
+import { Sidebar } from '../../../src/components/toolbars/LeftSidebar';
+import { IndicatorManager } from '../../../src/components/chart-tools/IndicatorManager';
+import { DrawingLayer } from '../../../src/components/chart-tools/DrawingLayer';
+import { FreeDrawingCanvas } from '../../../src/components/chart-tools/FreeDrawingCanvas';
+import { SimplePriceLevelLayer } from '../../../src/components/chart-tools/SimplePriceLevelLayer';
+import { FibonacciRetracementLayer } from '../../../src/components/chart-tools/FibonacciRetracementLayer';
+import { ChartConfig } from '../../../src/types/layout.types';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { ChartHeader } from './ChartHeader';
+import { ChartHeader } from '../../../src/components/toolbars/ChartHeader';
 
 interface ChartInstanceProps {
   config: ChartConfig;
@@ -49,6 +49,7 @@ export function ChartInstance({
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const chartInstanceRef = useRef<any>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
+  const [chartType, setChartType] = useState('candle_solid');
 
   const {
     state: drawingState,
@@ -107,7 +108,14 @@ export function ChartInstance({
     <div
       className={`w-full h-full flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden relative ${pjs.className}`}
     >
-      <ChartHeader symbol={config.symbol} chartNumber={chartNumber} />
+      {/* 🔥 UPDATED: Pass onSymbolChange handler */}
+      <ChartHeader
+        symbol={config.symbol}
+        chartNumber={chartNumber}
+        showChartNumber={true}
+        onSymbolChange={handleSymbolChange}
+      />
+
       <div className="flex-1 flex min-h-0">
         <Sidebar
           activeTool={drawingState.activeTool}
@@ -125,8 +133,10 @@ export function ChartInstance({
           <ChartToolbar
             symbol={config.symbol}
             timeframe={config.interval}
+            chartType={chartType}
             onSymbolChange={handleSymbolChange}
             onTimeframeChange={handleTimeframeChange}
+            onChartTypeChange={setChartType}
             onIndicatorClick={handleIndicatorClick}
           />
 
@@ -145,10 +155,10 @@ export function ChartInstance({
               </div>
             ) : (
               <>
-                {/* 🔥 UPDATED: Added isLocked prop */}
                 <KLineChart
                   candles={candles}
                   symbol={config.symbol}
+                  chartType={chartType}
                   ref={chartInstanceRef}
                   onVolPaneCreated={setVolPaneId}
                   isLocked={drawingState.drawingsLocked}
