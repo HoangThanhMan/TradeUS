@@ -2,28 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/src/components/dashboard/Header';
+import { Header } from '@/src/components/page/Header';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { UserRole, VipPlan } from '@tradex/shared-types';
-import { 
-  IconQrcode, 
-  IconUserCheck, 
-  IconRefresh, 
-  IconCheck, 
+import {
+  IconQrcode,
+  IconUserCheck,
+  IconRefresh,
+  IconCheck,
   IconX,
   IconSettings,
   IconMail,
   IconCalendar,
   IconCrown,
-  IconEye
+  IconEye,
 } from '@tabler/icons-react';
 
-const pjs = Plus_Jakarta_Sans({ 
+const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'], 
+  weight: ['400', '500', '600', '700'],
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 // Vietnamese banks list
 const BANKS = [
@@ -78,8 +79,10 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'qr-config' | 'approve-payments'>('qr-config');
-  
+  const [activeTab, setActiveTab] = useState<'qr-config' | 'approve-payments'>(
+    'qr-config',
+  );
+
   // QR Config State
   const [qrConfig, setQrConfig] = useState<QrConfig>({
     bankId: 'CTG',
@@ -91,7 +94,7 @@ export default function AdminPage() {
     yearlyPrice: 990000,
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
-  
+
   // VIP Requests State
   const [vipRequests, setVipRequests] = useState<VipRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
@@ -99,9 +102,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const token =
+        localStorage.getItem('accessToken') || localStorage.getItem('token');
       const userData = localStorage.getItem('user');
-      
+
       if (!token || !userData) {
         router.push('/auth');
         return;
@@ -109,7 +113,7 @@ export default function AdminPage() {
 
       try {
         const parsedUser = JSON.parse(userData);
-        
+
         // Check if user is admin
         if (parsedUser.role !== UserRole.ADMIN) {
           router.push('/dashboard');
@@ -117,10 +121,10 @@ export default function AdminPage() {
         }
 
         setUser(parsedUser);
-        
+
         // Load QR config
         await loadQrConfig(token);
-        
+
         // Load pending requests
         await loadVipRequests(token);
       } catch (err) {
@@ -138,10 +142,10 @@ export default function AdminPage() {
     try {
       const response = await fetch(`${API_URL}/admin/qr-config`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (response.ok) {
         const config = await response.json();
         if (config) {
@@ -156,12 +160,15 @@ export default function AdminPage() {
   const loadVipRequests = async (token: string) => {
     setIsLoadingRequests(true);
     try {
-      const response = await fetch(`${API_URL}/admin/vip-requests?status=pending`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/admin/vip-requests?status=pending`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
-      
+      );
+
       if (response.ok) {
         const data = await response.json();
         setVipRequests(Array.isArray(data) ? data : data.requests || []);
@@ -174,7 +181,8 @@ export default function AdminPage() {
   };
 
   const handleSaveConfig = async () => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    const token =
+      localStorage.getItem('accessToken') || localStorage.getItem('token');
     if (!token) return;
 
     setIsSavingConfig(true);
@@ -182,7 +190,7 @@ export default function AdminPage() {
       const response = await fetch(`${API_URL}/admin/qr-config`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(qrConfig),
@@ -202,20 +210,24 @@ export default function AdminPage() {
   };
 
   const handleApprove = async (requestId: string) => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    const token =
+      localStorage.getItem('accessToken') || localStorage.getItem('token');
     if (!token) return;
 
     setProcessingId(requestId);
     try {
-      const response = await fetch(`${API_URL}/admin/vip-requests/${requestId}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/admin/vip-requests/${requestId}/approve`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (response.ok) {
-        setVipRequests(prev => prev.filter(r => r._id !== requestId));
+        setVipRequests((prev) => prev.filter((r) => r._id !== requestId));
       } else {
         alert('Failed to approve request');
       }
@@ -228,24 +240,28 @@ export default function AdminPage() {
   };
 
   const handleReject = async (requestId: string) => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    const token =
+      localStorage.getItem('accessToken') || localStorage.getItem('token');
     if (!token) return;
 
     const note = prompt('Reason for rejection (optional):');
-    
+
     setProcessingId(requestId);
     try {
-      const response = await fetch(`${API_URL}/admin/vip-requests/${requestId}/reject`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${API_URL}/admin/vip-requests/${requestId}/reject`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ note }),
         },
-        body: JSON.stringify({ note }),
-      });
+      );
 
       if (response.ok) {
-        setVipRequests(prev => prev.filter(r => r._id !== requestId));
+        setVipRequests((prev) => prev.filter((r) => r._id !== requestId));
       } else {
         alert('Failed to reject request');
       }
@@ -258,8 +274,8 @@ export default function AdminPage() {
   };
 
   const handleBankChange = (bankId: string) => {
-    const bank = BANKS.find(b => b.id === bankId);
-    setQrConfig(prev => ({
+    const bank = BANKS.find((b) => b.id === bankId);
+    setQrConfig((prev) => ({
       ...prev,
       bankId,
       bankName: bank?.name || '',
@@ -267,13 +283,16 @@ export default function AdminPage() {
   };
 
   const generateQrUrl = (plan: 'monthly' | 'yearly') => {
-    const amount = plan === 'monthly' ? qrConfig.monthlyPrice : qrConfig.yearlyPrice;
+    const amount =
+      plan === 'monthly' ? qrConfig.monthlyPrice : qrConfig.yearlyPrice;
     return `https://img.vietqr.io/image/${qrConfig.bankId}-${qrConfig.accountNo}-${qrConfig.template}.png?amount=${amount}&addInfo=TRADEX VIP ${plan}&accountName=${encodeURIComponent(qrConfig.accountName)}`;
   };
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen bg-gray-50 flex items-center justify-center ${pjs.className}`}>
+      <div
+        className={`min-h-screen bg-gray-50 flex items-center justify-center ${pjs.className}`}
+      >
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500"></div>
       </div>
     );
@@ -282,7 +301,7 @@ export default function AdminPage() {
   return (
     <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
       <Header status="connected" />
-      
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -290,8 +309,12 @@ export default function AdminPage() {
             <IconSettings className="w-6 h-6 text-gray-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-            <p className="text-gray-500 text-sm">Manage QR code configuration and approve VIP payments</p>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage QR code configuration and approve VIP payments
+            </p>
           </div>
         </div>
 
@@ -331,55 +354,84 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-6">
               <IconQrcode className="w-5 h-5 text-blue-500" />
-              <h2 className="text-lg font-bold text-gray-800">VietQR Configuration</h2>
+              <h2 className="text-lg font-bold text-gray-800">
+                VietQR Configuration
+              </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column - Form */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bank
+                  </label>
                   <select
                     value={qrConfig.bankId}
                     onChange={(e) => handleBankChange(e.target.value)}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
-                    {BANKS.map(bank => (
-                      <option key={bank.id} value={bank.id}>{bank.name}</option>
+                    {BANKS.map((bank) => (
+                      <option key={bank.id} value={bank.id}>
+                        {bank.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Account Number
+                  </label>
                   <input
                     type="text"
                     value={qrConfig.accountNo}
-                    onChange={(e) => setQrConfig(prev => ({ ...prev, accountNo: e.target.value }))}
+                    onChange={(e) =>
+                      setQrConfig((prev) => ({
+                        ...prev,
+                        accountNo: e.target.value,
+                      }))
+                    }
                     placeholder="Enter account number"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">QR Template</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    QR Template
+                  </label>
                   <select
                     value={qrConfig.template}
-                    onChange={(e) => setQrConfig(prev => ({ ...prev, template: e.target.value }))}
+                    onChange={(e) =>
+                      setQrConfig((prev) => ({
+                        ...prev,
+                        template: e.target.value,
+                      }))
+                    }
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
-                    {QR_TEMPLATES.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                    {QR_TEMPLATES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Display Name
+                  </label>
                   <input
                     type="text"
                     value={qrConfig.accountName}
-                    onChange={(e) => setQrConfig(prev => ({ ...prev, accountName: e.target.value }))}
+                    onChange={(e) =>
+                      setQrConfig((prev) => ({
+                        ...prev,
+                        accountName: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., TradeX"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
@@ -387,20 +439,34 @@ export default function AdminPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Plan (VND)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Monthly Plan (VND)
+                    </label>
                     <input
                       type="number"
                       value={qrConfig.monthlyPrice}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, monthlyPrice: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({
+                          ...prev,
+                          monthlyPrice: Number(e.target.value),
+                        }))
+                      }
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Yearly Plan (VND)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Yearly Plan (VND)
+                    </label>
                     <input
                       type="number"
                       value={qrConfig.yearlyPrice}
-                      onChange={(e) => setQrConfig(prev => ({ ...prev, yearlyPrice: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({
+                          ...prev,
+                          yearlyPrice: Number(e.target.value),
+                        }))
+                      }
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
@@ -411,15 +477,19 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <IconEye className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-600">QR Code Preview</span>
+                  <span className="text-sm font-medium text-gray-600">
+                    QR Code Preview
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Monthly Plan</p>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                      Monthly Plan
+                    </p>
                     <div className="bg-gray-50 rounded-xl p-3">
                       {qrConfig.accountNo ? (
-                        <img 
+                        <img
                           src={generateQrUrl('monthly')}
                           alt="Monthly QR"
                           className="w-full aspect-square object-contain"
@@ -436,10 +506,12 @@ export default function AdminPage() {
                   </div>
 
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Yearly Plan</p>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                      Yearly Plan
+                    </p>
                     <div className="bg-gray-50 rounded-xl p-3">
                       {qrConfig.accountNo ? (
-                        <img 
+                        <img
                           src={generateQrUrl('yearly')}
                           alt="Yearly QR"
                           className="w-full aspect-square object-contain"
@@ -487,17 +559,23 @@ export default function AdminPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <IconUserCheck className="w-5 h-5 text-green-500" />
-                <h2 className="text-lg font-bold text-gray-800">Pending Payments</h2>
+                <h2 className="text-lg font-bold text-gray-800">
+                  Pending Payments
+                </h2>
               </div>
               <button
                 onClick={() => {
-                  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+                  const token =
+                    localStorage.getItem('accessToken') ||
+                    localStorage.getItem('token');
                   if (token) loadVipRequests(token);
                 }}
                 disabled={isLoadingRequests}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors text-sm"
               >
-                <IconRefresh className={`w-4 h-4 ${isLoadingRequests ? 'animate-spin' : ''}`} />
+                <IconRefresh
+                  className={`w-4 h-4 ${isLoadingRequests ? 'animate-spin' : ''}`}
+                />
                 Refresh
               </button>
             </div>
@@ -531,14 +609,18 @@ export default function AdminPage() {
 
                         {/* User Info */}
                         <div>
-                          <h3 className="font-bold text-gray-800">{request.username}</h3>
+                          <h3 className="font-bold text-gray-800">
+                            {request.username}
+                          </h3>
                           <div className="flex items-center gap-1 text-gray-500 text-sm mt-0.5">
                             <IconMail className="w-3.5 h-3.5" />
                             {request.email}
                           </div>
                           <div className="flex items-center gap-1 text-gray-400 text-xs mt-1">
                             <IconCalendar className="w-3.5 h-3.5" />
-                            {new Date(request.createdAt).toLocaleString('en-US')}
+                            {new Date(request.createdAt).toLocaleString(
+                              'en-US',
+                            )}
                           </div>
                         </div>
                       </div>
@@ -546,7 +628,8 @@ export default function AdminPage() {
                       {/* Amount & Plan */}
                       <div className="text-right">
                         <p className="text-2xl font-bold text-gray-800">
-                          $ {request.amount.toLocaleString()} <span className="text-sm font-normal">VND</span>
+                          $ {request.amount.toLocaleString()}{' '}
+                          <span className="text-sm font-normal">VND</span>
                         </p>
                         <div className="flex items-center gap-1 text-gray-500 text-sm mt-1 justify-end">
                           <IconCrown className="w-3.5 h-3.5" />

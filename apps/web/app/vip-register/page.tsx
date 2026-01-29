@@ -3,16 +3,24 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { VipStatus, VipPlan } from '@tradex/shared-types';
-import { Header } from '@/src/components/dashboard/Header';
+import { Header } from '@/src/components/page/Header';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { IconStar, IconCalendar, IconCheck, IconGift, IconCrown, IconSparkles } from '@tabler/icons-react';
+import {
+  IconStar,
+  IconCalendar,
+  IconCheck,
+  IconGift,
+  IconCrown,
+  IconSparkles,
+} from '@tabler/icons-react';
 
-const pjs = Plus_Jakarta_Sans({ 
+const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'], 
+  weight: ['400', '500', '600', '700'],
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const DEFAULT_PLANS = {
   [VipPlan.MONTHLY]: {
@@ -71,8 +79,9 @@ export default function VipRegisterPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      
+      const token =
+        localStorage.getItem('accessToken') || localStorage.getItem('token');
+
       if (!token) {
         router.push('/auth');
         return;
@@ -83,13 +92,13 @@ export default function VipRegisterPage() {
         const [userResponse, configResponse] = await Promise.all([
           fetch(`${API_URL}/users/profile`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           }),
           fetch(`${API_URL}/vip/config`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
           }),
         ]);
@@ -100,7 +109,7 @@ export default function VipRegisterPage() {
 
         const userData = await userResponse.json();
         setUser(userData);
-        
+
         // Update localStorage with fresh user data
         localStorage.setItem('user', JSON.stringify(userData));
 
@@ -138,7 +147,9 @@ export default function VipRegisterPage() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen bg-gray-50 flex items-center justify-center ${pjs.className}`}>
+      <div
+        className={`min-h-screen bg-gray-50 flex items-center justify-center ${pjs.className}`}
+      >
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-500"></div>
       </div>
     );
@@ -148,22 +159,30 @@ export default function VipRegisterPage() {
   if (user?.vipStatus === VipStatus.ACTIVE) {
     return (
       <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
-        <Header status={{ connected: true, clientId: null, instanceId: null }} />
+        <Header
+          status={{ connected: true, clientId: null, instanceId: null }}
+        />
         <div className="flex items-center justify-center p-8 pt-20">
           <div className="bg-white p-10 rounded-2xl shadow-lg max-w-md w-full text-center border border-green-200">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <IconCrown className="w-10 h-10 text-green-600" />
             </div>
-            <h1 className="text-3xl font-bold text-green-600 mb-2">You are a VIP Member!</h1>
-            <p className="text-gray-500 mb-6">Thank you for being with Trade-X.</p>
-            
+            <h1 className="text-3xl font-bold text-green-600 mb-2">
+              You are a VIP Member!
+            </h1>
+            <p className="text-gray-500 mb-6">
+              Thank you for being with Trade-X.
+            </p>
+
             <div className="bg-gray-50 p-4 rounded-xl mb-6">
               <p className="text-sm text-gray-500">Expiry Date:</p>
               <p className="text-xl font-bold text-gray-800">
-                {user.vipExpiry ? new Date(user.vipExpiry).toLocaleDateString('en-US') : 'Lifetime'}
+                {user.vipExpiry
+                  ? new Date(user.vipExpiry).toLocaleDateString('en-US')
+                  : 'Lifetime'}
               </p>
             </div>
-            
+
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3 rounded-xl transition-colors"
@@ -180,15 +199,20 @@ export default function VipRegisterPage() {
   if (user?.vipStatus === VipStatus.PENDING) {
     return (
       <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
-        <Header status={{ connected: true, clientId: null, instanceId: null }} />
+        <Header
+          status={{ connected: true, clientId: null, instanceId: null }}
+        />
         <div className="flex items-center justify-center p-8 pt-20">
           <div className="bg-white p-10 rounded-2xl shadow-lg max-w-md w-full text-center border border-yellow-200">
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <IconSparkles className="w-10 h-10 text-yellow-600" />
             </div>
-            <h1 className="text-2xl font-bold text-yellow-600 mb-2">Payment Pending Approval</h1>
+            <h1 className="text-2xl font-bold text-yellow-600 mb-2">
+              Payment Pending Approval
+            </h1>
             <p className="text-gray-500 mb-6">
-              Your request has been submitted. Admin will verify and activate your account within 24 hours.
+              Your request has been submitted. Admin will verify and activate
+              your account within 24 hours.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
@@ -209,28 +233,40 @@ export default function VipRegisterPage() {
 
   const handleConfirmPayment = async () => {
     if (!selectedPlan) return;
-    
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+
+    const token =
+      localStorage.getItem('accessToken') || localStorage.getItem('token');
     if (!token) {
       router.push('/auth');
       return;
     }
 
     setIsProcessing(true);
-    
+
     try {
       const response = await fetch(`${API_URL}/vip/request`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ plan: selectedPlan }),
       });
 
       if (response.ok) {
-        setUser({ ...user, vipStatus: VipStatus.PENDING, vipPlan: selectedPlan });
-        localStorage.setItem('user', JSON.stringify({ ...user, vipStatus: VipStatus.PENDING, vipPlan: selectedPlan }));
+        setUser({
+          ...user,
+          vipStatus: VipStatus.PENDING,
+          vipPlan: selectedPlan,
+        });
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            ...user,
+            vipStatus: VipStatus.PENDING,
+            vipPlan: selectedPlan,
+          }),
+        );
         setShowPayment(false);
       } else {
         const error = await response.json();
@@ -251,7 +287,7 @@ export default function VipRegisterPage() {
     template: 'compact',
   };
 
-  const qrUrl = selectedPlan 
+  const qrUrl = selectedPlan
     ? `https://img.vietqr.io/image/${bankInfo.bankId}-${bankInfo.accountNo}-${bankInfo.template}.png?amount=${plans[selectedPlan].price}&addInfo=TRADEX VIP ${user?.username || user?.email} ${selectedPlan}`
     : '';
 
@@ -259,23 +295,29 @@ export default function VipRegisterPage() {
   if (showPayment && selectedPlan) {
     return (
       <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
-        <Header status={{ connected: true, clientId: null, instanceId: null }} />
+        <Header
+          status={{ connected: true, clientId: null, instanceId: null }}
+        />
         <div className="flex items-center justify-center p-8 pt-12">
           <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
-            <button 
+            <button
               onClick={() => setShowPayment(false)}
               className="text-gray-400 hover:text-gray-600 mb-4"
             >
               ← Back to plans
             </button>
-            
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Complete Payment</h2>
-            <p className="text-gray-500 mb-6">Scan QR code to pay for {plans[selectedPlan].name}</p>
-            
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Complete Payment
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Scan QR code to pay for {plans[selectedPlan].name}
+            </p>
+
             <div className="bg-gray-50 p-4 rounded-xl mb-6 flex justify-center">
-              <img 
-                src={qrUrl} 
-                alt="VietQR Payment" 
+              <img
+                src={qrUrl}
+                alt="VietQR Payment"
                 className="w-56 h-56 object-contain"
               />
             </div>
@@ -283,15 +325,21 @@ export default function VipRegisterPage() {
             <div className="space-y-3 mb-6 text-sm">
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Bank:</span>
-                <span className="font-semibold text-gray-800">{qrConfig?.bankName || bankInfo.bankId}</span>
+                <span className="font-semibold text-gray-800">
+                  {qrConfig?.bankName || bankInfo.bankId}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Account Number:</span>
-                <span className="font-semibold text-gray-800">{bankInfo.accountNo}</span>
+                <span className="font-semibold text-gray-800">
+                  {bankInfo.accountNo}
+                </span>
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Account Name:</span>
-                <span className="font-semibold text-gray-800">{bankInfo.accountName}</span>
+                <span className="font-semibold text-gray-800">
+                  {bankInfo.accountName}
+                </span>
               </div>
               <div className="flex justify-between py-2">
                 <span className="text-gray-500">Amount:</span>
@@ -302,7 +350,8 @@ export default function VipRegisterPage() {
             </div>
 
             <p className="text-xs text-gray-400 mb-6">
-              * Please do not modify the transfer content for automatic recognition.
+              * Please do not modify the transfer content for automatic
+              recognition.
             </p>
 
             <button
@@ -332,7 +381,7 @@ export default function VipRegisterPage() {
   return (
     <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
       <Header status={{ connected: true, clientId: null, instanceId: null }} />
-      
+
       <div className="max-w-5xl mx-auto px-4 py-12">
         {/* Title Section */}
         <div className="text-center mb-10">
@@ -362,12 +411,18 @@ export default function VipRegisterPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 relative">
             <div className="flex items-center gap-2 mb-4">
               <IconCalendar className="w-5 h-5 text-gray-400" />
-              <h3 className="text-xl font-bold text-gray-800">{plans[VipPlan.MONTHLY].name}</h3>
+              <h3 className="text-xl font-bold text-gray-800">
+                {plans[VipPlan.MONTHLY].name}
+              </h3>
             </div>
-            
+
             <div className="mb-6">
-              <span className="text-4xl font-bold text-blue-600">{plans[VipPlan.MONTHLY].priceDisplay}</span>
-              <span className="text-gray-500 ml-1">VND/{plans[VipPlan.MONTHLY].duration}</span>
+              <span className="text-4xl font-bold text-blue-600">
+                {plans[VipPlan.MONTHLY].priceDisplay}
+              </span>
+              <span className="text-gray-500 ml-1">
+                VND/{plans[VipPlan.MONTHLY].duration}
+              </span>
             </div>
 
             <ul className="space-y-3 mb-8">
@@ -399,12 +454,18 @@ export default function VipRegisterPage() {
 
             <div className="flex items-center gap-2 mb-4">
               <IconCalendar className="w-5 h-5 text-gray-400" />
-              <h3 className="text-xl font-bold text-gray-800">{plans[VipPlan.YEARLY].name}</h3>
+              <h3 className="text-xl font-bold text-gray-800">
+                {plans[VipPlan.YEARLY].name}
+              </h3>
             </div>
-            
+
             <div className="mb-2">
-              <span className="text-4xl font-bold text-yellow-500">{plans[VipPlan.YEARLY].priceDisplay}</span>
-              <span className="text-gray-500 ml-1">VND/{plans[VipPlan.YEARLY].duration}</span>
+              <span className="text-4xl font-bold text-yellow-500">
+                {plans[VipPlan.YEARLY].priceDisplay}
+              </span>
+              <span className="text-gray-500 ml-1">
+                VND/{plans[VipPlan.YEARLY].duration}
+              </span>
             </div>
 
             {/* Savings Badge */}

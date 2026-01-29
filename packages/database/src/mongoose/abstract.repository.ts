@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
 
 // Interface for logger to avoid version conflicts between packages
@@ -13,6 +13,12 @@ export abstract class AbstractRepository<TDocument> {
   protected abstract readonly logger: ILogger;
 
   constructor(protected readonly model: Model<TDocument>) {}
+
+  private isValidObjectId(id: string): boolean {
+    return (
+      Types.ObjectId.isValid(id) && new Types.ObjectId(id).toString() === id
+    );
+  }
 
   async create(document: Omit<TDocument, '_id'>): Promise<TDocument> {
     const createdDocument = new this.model({
@@ -50,6 +56,9 @@ export abstract class AbstractRepository<TDocument> {
   }
 
   async findById(id: string): Promise<TDocument | null> {
+    if (!this.isValidObjectId(id)) {
+      throw new BadRequestException(`Invalid ID format: ${id}`);
+    }
     const document = await this.model.findById(id).lean<TDocument>();
     return document;
   }
@@ -58,6 +67,9 @@ export abstract class AbstractRepository<TDocument> {
     id: string,
     update: UpdateQuery<TDocument>,
   ): Promise<TDocument> {
+    if (!this.isValidObjectId(id)) {
+      throw new BadRequestException(`Invalid ID format: ${id}`);
+    }
     const document = await this.model
       .findByIdAndUpdate(id, update, { new: true })
       .lean<TDocument>();
@@ -76,6 +88,9 @@ export abstract class AbstractRepository<TDocument> {
   }
 
   async deleteById(id: string): Promise<boolean> {
+    if (!this.isValidObjectId(id)) {
+      throw new BadRequestException(`Invalid ID format: ${id}`);
+    }
     const { deletedCount } = await this.model.deleteOne({
       _id: id,
     } as FilterQuery<TDocument>);

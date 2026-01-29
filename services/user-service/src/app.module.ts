@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { AdminModule } from './admin/admin.module';
+import { AuthSharedModule } from '@tradex/auth-shared';
 
 @Module({
   imports: [
@@ -15,9 +16,16 @@ import { AdminModule } from './admin/admin.module';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/tradex',
+        uri:
+          configService.get<string>('MONGODB_URI') ||
+          'mongodb://localhost:27017/tradex',
       }),
       inject: [ConfigService],
+    }),
+    AuthSharedModule.forRoot({
+      jwtSecret: process.env.JWT_SECRET || 'tradex-secret-key',
+      jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
+      jwtRefreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
     }),
     UsersModule,
     AdminModule,

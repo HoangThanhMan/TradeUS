@@ -7,13 +7,13 @@ export enum UserRole {
 export enum VipStatus {
   NONE = 'NONE',
   PENDING = 'PENDING', // Đã thanh toán, chờ Admin duyệt
-  ACTIVE = 'ACTIVE',   // Đã duyệt, đang là VIP
-  EXPIRED = 'EXPIRED'  // Hết hạn
+  ACTIVE = 'ACTIVE', // Đã duyệt, đang là VIP
+  EXPIRED = 'EXPIRED', // Hết hạn
 }
 
 export enum VipPlan {
   MONTHLY = 'MONTHLY',
-  YEARLY = 'YEARLY'
+  YEARLY = 'YEARLY',
 }
 
 export interface IUser {
@@ -47,6 +47,7 @@ export interface IAuthTokens {
 
 export interface IJwtPayload {
   userId: string; // user id
+  username?: string;
   email: string;
   role: UserRole;
   iat?: number;
