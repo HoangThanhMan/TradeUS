@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx (Updated)
+// app/dashboard/page.tsx (UPDATED)
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,16 +6,17 @@ import { useRouter } from 'next/navigation';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { useChartData } from '../../src/hooks/useChartData';
 import { useDrawingManager } from '../../src/hooks/useDrawingManager';
-import { Header } from '../../src/components/dashboard/Header';
-import { Sidebar } from '../../src/components/dashboard/Sidebar';
-import { ChartToolbar } from '../../src/components/chart/ChartToolbar';
-import { InfoBar } from '../../src/components/chart/InfoBar';
-import { KLineChart } from '../../src/components/chart/KLineChart';
-import { IndicatorManager } from '../../src/components/chart/IndicatorManager';
-import { DrawingLayer } from '../../src/components/chart/DrawingLayer';
-import { FreeDrawingCanvas } from '../../src/components/chart/FreeDrawingCanvas';
-import { SimplePriceLevelLayer } from '../../src/components/chart/SimplePriceLevelLayer';
-import { FibonacciRetracementLayer } from '../../src/components/chart/FibonacciRetracementLayer';
+import { Header } from '../../src/components/page/Header';
+import { Sidebar } from '../../src/components/toolbars/LeftSidebar';
+import { ChartToolbar } from '../../src/components/toolbars/ChartToolbar';
+import { InfoBar } from '../../src/components/toolbars/InfoBar';
+import { KLineChart } from '../../src/components/chart-tools/KLineChart';
+import { IndicatorManager } from '../../src/components/chart-tools/IndicatorManager';
+import { DrawingLayer } from '../../src/components/chart-tools/DrawingLayer';
+import { FreeDrawingCanvas } from '../../src/components/chart-tools/FreeDrawingCanvas';
+import { SimplePriceLevelLayer } from '../../src/components/chart-tools/SimplePriceLevelLayer';
+import { FibonacciRetracementLayer } from '../../src/components/chart-tools/FibonacciRetracementLayer';
+import { ChartHeader } from '../../src/components/toolbars/ChartHeader';
 
 const WS_URL = 'http://localhost:3002/prices';
 
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [timeframe, setTimeframe] = useState('1m');
+  const [chartType, setChartType] = useState('candle_solid');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const chartInstanceRef = useRef<any>(null);
@@ -41,9 +43,9 @@ export default function DashboardPage() {
     snapToPrice,
     addPriceLevelPoint,
     clearPriceLevels,
-    setFibonacciHigh,      
-    setFibonacciLow,       
-    clearFibonacci, 
+    setFibonacciHigh,
+    setFibonacciLow,
+    clearFibonacci,
   } = useDrawingManager(chartInstanceRef.current);
 
   useEffect(() => {
@@ -55,8 +57,13 @@ export default function DashboardPage() {
     }
   }, [router]);
 
-  const { socket, status, error, subscribe, unsubscribe } = useWebSocket(WS_URL);
-  const { candles, latestPrice, loading } = useChartData(socket, symbol, timeframe);
+  const { socket, status, error, subscribe, unsubscribe } =
+    useWebSocket(WS_URL);
+  const { candles, latestPrice, loading } = useChartData(
+    socket,
+    symbol,
+    timeframe,
+  );
 
   useEffect(() => {
     if (socket && status.connected) {
@@ -64,6 +71,11 @@ export default function DashboardPage() {
       return () => unsubscribe([symbol], timeframe);
     }
   }, [socket, status.connected, symbol, timeframe]);
+
+  const handleChartTypeChange = (newType: string) => {
+    console.log('🎨 Changing chart type to:', newType);
+    setChartType(newType);
+  };
 
   if (!isAuthenticated) {
     return (
@@ -76,7 +88,7 @@ export default function DashboardPage() {
   return (
     <div className="h-screen flex flex-col bg-white">
       <Header status={status} />
-      
+
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activeTool={drawingState.activeTool}
@@ -89,36 +101,47 @@ export default function DashboardPage() {
           onToggleVisibility={toggleDrawingsVisibility}
           onClearAll={clearAllDrawings}
         />
-        
+
         <div className="flex-1 flex flex-col">
-          <ChartToolbar 
+          {/* 🔥 UPDATED: Pass onSymbolChange handler */}
+          <ChartHeader
+            symbol={symbol}
+            showChartNumber={false}
+            onSymbolChange={setSymbol}
+          />
+
+          <ChartToolbar
             symbol={symbol}
             timeframe={timeframe}
+            chartType={chartType}
             onSymbolChange={setSymbol}
             onTimeframeChange={setTimeframe}
+            onChartTypeChange={handleChartTypeChange}
             onIndicatorClick={() => setShowIndicatorModal(true)}
           />
-          
+
           <InfoBar latestPrice={latestPrice} />
-          
+
           {loading ? (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex min-h-screen items-center justify-center">
               <div className="text-center text-gray-500">
-                <div className="text-4xl mb-2">📊</div>
+                <div className="mb-2 flex justify-center">
+                  <div className="w-10 h-10 border-4 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+                </div>
                 <div>Loading chart data...</div>
               </div>
             </div>
           ) : (
             <div className="flex-1 relative">
-              {/* 🔥 UPDATED: Added isLocked prop */}
-              <KLineChart 
-                candles={candles} 
+              <KLineChart
+                candles={candles}
                 symbol={symbol}
-                ref={chartInstanceRef} 
+                chartType={chartType}
+                ref={chartInstanceRef}
                 onVolPaneCreated={setVolPaneId}
                 isLocked={drawingState.drawingsLocked}
               />
-              
+
               <DrawingLayer
                 chartInstance={chartInstanceRef.current}
                 drawings={drawingState.drawings}

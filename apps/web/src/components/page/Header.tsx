@@ -18,9 +18,9 @@ interface UserData {
   vipStatus?: string;
 }
 
-const pjs = Plus_Jakarta_Sans({ 
+const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['500', '600', '700'], 
+  weight: ['500', '600', '700'],
 });
 
 export function Header({ status }: HeaderProps) {
