@@ -3,31 +3,31 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
   AbstractRepository,
-  QRConfig,
-  QRConfigDocument,
+  QrConfig,
+  QrConfigDocument,
 } from '@tradex/database';
 
 @Injectable()
-export class QRConfigRepository extends AbstractRepository<QRConfigDocument> {
+export class QRConfigRepository extends AbstractRepository<QrConfigDocument> {
   protected readonly logger = new Logger(QRConfigRepository.name);
 
   constructor(
-    @InjectModel(QRConfig.name)
-    qrConfigModel: Model<QRConfigDocument>,
+    @InjectModel(QrConfig.name)
+    qrConfigModel: Model<QrConfigDocument>,
   ) {
     super(qrConfigModel);
   }
 
   // Get the active QR config
-  async getActiveConfig(): Promise<QRConfigDocument | null> {
+  async getActiveConfig(): Promise<QrConfigDocument | null> {
     return this.findOne({ isActive: true });
   }
 
   // Create new QR config
   async createConfig(
-    configData: Partial<QRConfigDocument>,
+    configData: Partial<QrConfigDocument>,
     createdBy?: string,
-  ): Promise<QRConfigDocument> {
+  ): Promise<QrConfigDocument> {
     // Deactivate all existing configs
     await this.model.updateMany({}, { $set: { isActive: false } });
 
@@ -36,15 +36,15 @@ export class QRConfigRepository extends AbstractRepository<QRConfigDocument> {
       isActive: true,
       createdBy,
       lastUpdatedBy: createdBy,
-    } as QRConfigDocument);
+    } as QrConfigDocument);
   }
 
   // Update QR config
   async updateConfig(
     id: string,
-    configData: Partial<QRConfigDocument>,
+    configData: Partial<QrConfigDocument>,
     updatedBy?: string,
-  ): Promise<QRConfigDocument> {
+  ): Promise<QrConfigDocument> {
     return this.findByIdAndUpdate(id, {
       $set: {
         ...configData,
@@ -55,20 +55,24 @@ export class QRConfigRepository extends AbstractRepository<QRConfigDocument> {
 
   // Update or create QR config (upsert)
   async upsertConfig(
-    configData: Partial<QRConfigDocument>,
+    configData: Partial<QrConfigDocument>,
     userId?: string,
-  ): Promise<QRConfigDocument> {
+  ): Promise<QrConfigDocument> {
     const existingConfig = await this.getActiveConfig();
 
     if (existingConfig) {
-      return this.updateConfig(existingConfig._id!.toString(), configData, userId);
+      return this.updateConfig(
+        existingConfig._id!.toString(),
+        configData,
+        userId,
+      );
     }
 
     return this.createConfig(configData, userId);
   }
 
   // Get all configs (including inactive)
-  async getAllConfigs(): Promise<QRConfigDocument[]> {
-    return this.model.find().sort({ createdAt: -1 }).lean<QRConfigDocument[]>();
+  async getAllConfigs(): Promise<QrConfigDocument[]> {
+    return this.model.find().sort({ createdAt: -1 }).lean<QrConfigDocument[]>();
   }
 }

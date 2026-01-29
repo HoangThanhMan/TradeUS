@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "seed:admin": "ts-node src/scripts/seed-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",
@@ -28,9 +29,11 @@
     "@tradex/auth-shared": "^1.0.0",
     "@tradex/database": "^1.0.0",
     "@tradex/shared-types": "^1.0.0",
+    "@types/qrcode": "^1.5.6",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "mongoose": "^8.9.0",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

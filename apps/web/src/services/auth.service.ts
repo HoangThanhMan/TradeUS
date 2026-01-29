@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
@@ -26,7 +26,10 @@ export const authService = {
       }
       return response.data;
     } catch (error: any) {
-      throw error.response ? error.response.data : error;
+      // Extract error message properly
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData?.error || 'Login failed. Please check your credentials.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -44,7 +47,9 @@ export const authService = {
       
       return response.data;
     } catch (error: any) {
-      throw error.response ? error.response.data : error;
+      const errorData = error.response?.data;
+      const errorMessage = errorData?.message || errorData?.error || 'Registration failed. Please try again.';
+      throw new Error(errorMessage);
     }
   },
 
@@ -53,7 +58,7 @@ export const authService = {
       const token = localStorage.getItem('accessToken');
       if (!token) return null;
 
-      const response = await axios.get(`${API_URL}/auth/me`, getAuthHeaders());
+      const response = await axios.get(`${API_URL}/users/profile`, getAuthHeaders());
       return response.data;
     } catch (error: any) {
         if (error.response && error.response.status === 401) {
@@ -63,16 +68,12 @@ export const authService = {
     }
   },
 
-  logout: async () => {
-    try {
-       await axios.post(`${API_URL}/auth/logout`, {}, getAuthHeaders());
-    } catch (error) {
-       console.error("Logout error", error);
-    } finally {
-       localStorage.removeItem('accessToken');
-       localStorage.removeItem('refreshToken');
-       window.location.href = '/login'; 
-    }
+  logout: () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/auth'; 
   },
   
   refreshToken: async () => {

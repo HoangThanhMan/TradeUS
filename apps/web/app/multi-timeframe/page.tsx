@@ -10,8 +10,11 @@ import { SymbolDropdown } from '../../src/components/chart-tools/SymbolDropdown'
 import { IconChartBar } from '@tabler/icons-react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { SYMBOL_META } from '../../src/constants/symbols';
+import { VipStatus } from '@tradex/shared-types';
 
-const WS_URL = 'http://localhost:3002/prices';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3002/prices';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -24,6 +27,7 @@ const POPULAR_SYMBOLS = Object.keys(SYMBOL_META);
 export default function MultiTimeframePage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const { socket, status, error } = useWebSocket(WS_URL);
 
@@ -31,18 +35,58 @@ export default function MultiTimeframePage() {
   const defaultTimeframes = ['5m', '4h', '1d', '1w'];
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/auth');
-    } else {
-      setIsAuthenticated(true);
-    }
+    const checkVipAccess = async () => {
+      const token =
+        localStorage.getItem('accessToken') || localStorage.getItem('token');
+
+      if (!token) {
+        router.push('/auth');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/users/profile`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch profile');
+        }
+
+        const user = await response.json();
+
+        if (user.vipStatus === VipStatus.ACTIVE || user.role === 'admin') {
+          setIsAuthenticated(true);
+        } else {
+          console.warn('User is not VIP, redirecting...');
+          router.push('/vip-register');
+        }
+      } catch (err) {
+        console.error('Error checking VIP status:', err);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('token');
+        router.push('/auth');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkVipAccess();
   }, [router]);
 
-  if (!isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div
+        className={`min-h-screen bg-white flex flex-col items-center justify-center ${pjs.className}`}
+      >
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+        <div className="text-gray-600 font-medium">
+          Verifying VIP Membership...
+        </div>
       </div>
     );
   }
