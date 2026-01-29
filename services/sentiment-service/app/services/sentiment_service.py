@@ -22,33 +22,122 @@ from app.repositories.sentiment_repository import SentimentRepository
 
 logger = logging.getLogger(__name__)
 
-# LLM Prompt for sentiment analysis
-SENTIMENT_ANALYSIS_PROMPT = """You are a financial sentiment analysis expert specializing in cryptocurrency markets.
+# # LLM Prompt for sentiment analysis
+# SENTIMENT_ANALYSIS_PROMPT = """You are a financial sentiment analysis expert specializing in cryptocurrency markets.
 
-Analyze the following news article and extract sentiment information.
+# Analyze the following news article and extract sentiment information.
 
-**News Title:** {title}
+# **News Title:** {title}
 
-**News Content:** {content}
+# **News Content:** {content}
+
+# **Published Date:** {published_date}
+
+# **Instructions:**
+# 1. Identify the primary cryptocurrency trading pair mentioned (e.g., BTCUSDT, ETHUSDT). If multiple are mentioned, choose the most relevant one. If none is explicitly mentioned, infer from context or use "CRYPTO" as a general symbol.
+# 2. Determine the sentiment score from -1 (very negative) to 1 (very positive).
+# 3. Classify the dominant emotion from: Optimism, Greed, Excitement, Fear, Anger, Pessimism.
+# 4. Provide a brief reason (1-2 sentences) explaining your sentiment assessment.
+
+# **Response Format (JSON only, no markdown):**
+# {{
+#     "symbol": "BTCUSDT",
+#     "sentiment": 0.75,
+#     "emotion": "Optimism",
+#     "reason": "The article highlights strong institutional buying pressure and positive market outlook."
+# }}
+
+# Respond ONLY with the JSON object, no additional text or formatting."""
+
+SENTIMENT_ANALYSIS_PROMPT = """You are an elite financial analyst and cryptocurrency market sentiment expert with deep expertise in behavioral finance, technical analysis, and market psychology.
+
+Your task is to perform a comprehensive, institutional-grade sentiment analysis on the following news article.
+
+═══════════════════════════════════════════════════════════════════
+📰 NEWS ARTICLE FOR ANALYSIS
+═══════════════════════════════════════════════════════════════════
+
+**Title:** {title}
+
+**Content:** {content}
 
 **Published Date:** {published_date}
 
-**Instructions:**
-1. Identify the primary cryptocurrency trading pair mentioned (e.g., BTCUSDT, ETHUSDT). If multiple are mentioned, choose the most relevant one. If none is explicitly mentioned, infer from context or use "CRYPTO" as a general symbol.
-2. Determine the sentiment score from -1 (very negative) to 1 (very positive).
-3. Classify the dominant emotion from: Optimism, Greed, Excitement, Fear, Anger, Pessimism.
-4. Provide a brief reason (1-2 sentences) explaining your sentiment assessment.
+═══════════════════════════════════════════════════════════════════
+📋 ANALYSIS FRAMEWORK
+═══════════════════════════════════════════════════════════════════
 
-**Response Format (JSON only, no markdown):**
+Perform a multi-dimensional analysis covering these aspects:
+
+### 1. SYMBOL IDENTIFICATION
+- Identify the PRIMARY cryptocurrency/trading pair (e.g., BTCUSDT, ETHUSDT)
+- If multiple assets mentioned, select the one with HIGHEST relevance to the core narrative
+- If no specific crypto mentioned, infer from context or default to "CRYPTO"
+
+### 2. SENTIMENT SCORING (-1.0 to +1.0)
+Apply this calibrated scale:
+- **+0.8 to +1.0**: Extremely bullish (major positive catalyst, breakthrough news)
+- **+0.5 to +0.8**: Strongly positive (institutional adoption, favorable regulation)
+- **+0.2 to +0.5**: Moderately positive (minor good news, steady growth indicators)
+- **-0.2 to +0.2**: Neutral (mixed signals, balanced reporting)
+- **-0.5 to -0.2**: Moderately negative (concerns raised, minor setbacks)
+- **-0.8 to -0.5**: Strongly negative (significant risks, regulatory threats)
+- **-1.0 to -0.8**: Extremely bearish (crisis, major negative catalyst)
+
+### 3. EMOTION CLASSIFICATION
+Select the DOMINANT market emotion from:
+- **Optimism**: Confident expectation of positive outcomes
+- **Greed**: Excessive desire for gains, FOMO indicators
+- **Excitement**: High enthusiasm, buzz around developments
+- **Fear**: Anxiety about potential losses or risks
+- **Anger**: Frustration, often about manipulation or unfairness
+- **Pessimism**: Negative expectations, bearish outlook
+
+### 4. COMPREHENSIVE REASONING (CRITICAL - Be thorough!)
+Your analysis MUST include:
+
+**A) Key Catalyst Identification:**
+- What is the PRIMARY driver of this news? (e.g., ETF approval, hack, partnership, regulation)
+- Is this a leading indicator or lagging information?
+
+**B) Market Impact Assessment:**
+- SHORT-TERM impact (24-72 hours): How will traders react immediately?
+- MEDIUM-TERM impact (1-4 weeks): What are the sustained effects?
+- Potential PRICE ACTION implications (support/resistance levels affected?)
+
+**C) Stakeholder Analysis:**
+- How does this affect: Retail investors? Institutions? Miners/Validators? Developers?
+- Who benefits? Who is at risk?
+
+**D) Sentiment Drivers:**
+- Quote specific phrases/keywords from the article that drive your sentiment score
+- Analyze the TONE: Is it sensationalist, objective, fear-mongering, or promotional?
+- Look for hidden biases or agenda in the reporting
+
+**E) Risk Factors & Contrarian View:**
+- What could go WRONG with the bullish thesis (or right with bearish)?
+- Are there any red flags or overlooked concerns?
+- What is the market potentially NOT pricing in?
+
+**F) Confidence Level:**
+- How reliable is this news source?
+- Is this speculation or confirmed information?
+- Are there conflicting reports?
+
+═══════════════════════════════════════════════════════════════════
+📤 RESPONSE FORMAT
+═══════════════════════════════════════════════════════════════════
+
+Respond ONLY with a valid JSON object (no markdown, no extra text):
+
 {{
     "symbol": "BTCUSDT",
-    "sentiment": 0.75,
+    "sentiment": 0.72,
     "emotion": "Optimism",
-    "reason": "The article highlights strong institutional buying pressure and positive market outlook."
+    "reason": "COMPREHENSIVE ANALYSIS HERE - This must be 5-8 sentences covering: (1) The primary catalyst identified in the article [specific quote/fact]. (2) Immediate market implications - how this affects supply/demand dynamics and trader psychology. (3) Medium-term outlook and potential price action scenarios. (4) Key stakeholders impacted and their likely response. (5) Risk factors or contrarian considerations that could invalidate this thesis. (6) Confidence assessment based on source reliability and information quality. The tone of the article [describe tone] supports the [emotion] classification because [specific language examples]."
 }}
 
-Respond ONLY with the JSON object, no additional text or formatting."""
-
+IMPORTANT: The 'reason' field should be a comprehensive paragraph (150-250 words) that demonstrates deep analytical thinking, NOT a superficial summary."""
 
 class SentimentService:
     """
@@ -273,32 +362,31 @@ class SentimentService:
         emotion: EmotionType,
         symbol: str
     ) -> str:
-        """Generate a mock explanation for the sentiment."""
+        """Generate a comprehensive mock explanation for the sentiment."""
         reasons = {
             EmotionType.OPTIMISM: [
-                f"Positive outlook for {symbol} based on favorable market conditions.",
-                f"Article suggests bullish sentiment for {symbol} with growing adoption.",
-                f"Market indicators point to continued growth for {symbol}.",
+                f"The article presents a constructive outlook for {symbol}, driven by favorable market conditions and growing institutional interest. Key catalysts include expanding adoption metrics and positive on-chain data suggesting accumulation patterns. The measured tone of the reporting indicates confidence without excessive hype, supporting a moderately bullish sentiment. Short-term price action may see support at current levels with potential upside in the coming weeks. Risk factors include broader macro uncertainty, though the overall narrative remains positive for medium-term holders.",
+                f"Analysis reveals bullish undertones for {symbol} based on multiple positive indicators mentioned in the article. The report highlights increasing network activity and declining exchange reserves, suggesting supply-side pressure that could favor price appreciation. Institutional flows appear steady with no signs of distribution. The language used is optimistic but grounded, avoiding sensationalism while emphasizing fundamental improvements. Traders should monitor key resistance levels as a breakout could accelerate momentum.",
             ],
             EmotionType.GREED: [
-                f"Strong FOMO indicators present for {symbol} suggesting speculative interest.",
-                f"Excessive bullish sentiment detected, indicating potential {symbol} euphoria.",
+                f"Strong FOMO (Fear Of Missing Out) signals detected for {symbol}, with the article emphasizing rapid gains and 'once-in-a-lifetime' opportunity language. The sentiment score reflects heightened speculative interest, which historically precedes volatile price action. While short-term momentum may continue, the excessive bullishness raises caution flags for risk-aware traders. The article's promotional tone and focus on price targets rather than fundamentals suggests retail-driven euphoria. Contrarian analysis suggests potential for sharp corrections once profit-taking begins.",
+                f"The article displays characteristics of peak greed phase for {symbol}, with multiple references to price predictions and lifestyle gains. Key warning signs include lack of risk disclosure, emphasis on FOMO, and absence of balanced analysis. While momentum traders may benefit short-term, the sentiment extreme suggests elevated reversal risk. Smart money indicators should be monitored for distribution patterns. Historical precedent shows such euphoric coverage often marks local tops.",
             ],
             EmotionType.EXCITEMENT: [
-                f"High enthusiasm around {symbol} developments and announcements.",
-                f"Market showing strong excitement for {symbol} recent news.",
+                f"High enthusiasm permeates the {symbol} coverage, driven by significant technological or partnership announcements. The article's energetic tone reflects genuine market excitement about new developments that could expand utility or adoption. Unlike pure speculation, this excitement appears anchored to tangible catalysts with measurable impact potential. Short-term volatility is expected as traders position around the news, with the medium-term outlook dependent on execution of announced initiatives. The balanced coverage of both opportunities and implementation challenges adds credibility to the bullish thesis.",
+                f"The market shows elevated excitement for {symbol} following breakthrough developments detailed in the article. The enthusiasm appears justified given the scale of announcements, though implementation risk remains a consideration. Trading volumes and social metrics likely to spike in coming sessions. The article maintains journalistic objectivity while conveying the significance of developments, suggesting this is substantive news rather than manufactured hype. Price discovery phase expected as market digests implications.",
             ],
             EmotionType.FEAR: [
-                f"Market uncertainty driving fear around {symbol} positions.",
-                f"Negative news cycle creating bearish pressure on {symbol}.",
+                f"The article conveys significant market anxiety around {symbol}, with emphasis on downside risks and cautionary language. Key concerns include regulatory uncertainty, security vulnerabilities, or adverse market conditions detailed in the coverage. The fearful sentiment may present contrarian opportunities for long-term investors, though short-term price pressure is likely as weak hands exit positions. Risk management is paramount in current conditions. The article's focus on worst-case scenarios, while potentially valid, may also reflect media negativity bias during market downturns.",
+                f"Fear-driven sentiment dominates {symbol} coverage, with the article highlighting multiple risk factors and potential threats to the asset. While some concerns appear legitimate and warrant attention, the overall tone may be excessively pessimistic. Capitulation indicators should be monitored for potential bottom signals. The article lacks balance, focusing predominantly on bearish scenarios without acknowledging countervailing bullish factors. This asymmetric coverage often intensifies at market lows.",
             ],
             EmotionType.ANGER: [
-                f"Frustration detected regarding {symbol} market manipulation concerns.",
-                f"Negative sentiment driven by regulatory concerns for {symbol}.",
+                f"The article reflects market frustration regarding {symbol}, with pointed criticism of market manipulation, governance failures, or broken promises. The angry sentiment stems from perceived unfair treatment of retail participants or failure of project leadership to deliver on commitments. While the criticism may be valid, emotion-driven trading decisions during such periods often prove costly. The article's accusatory tone and calls for action suggest community tensions that could impact price and development progress. Long-term implications depend on project team response to concerns.",
+                f"Strong frustration detected in {symbol} coverage, with the article detailing grievances about market structure, insider behavior, or regulatory overreach. The anger appears directed at specific actors or decisions rather than the asset fundamentally. Such sentiment often creates short-term selling pressure but may not reflect long-term value proposition. The confrontational language suggests community divisions that require resolution. Trading during high-emotion periods carries elevated risk.",
             ],
             EmotionType.PESSIMISM: [
-                f"Bearish outlook for {symbol} based on current market analysis.",
-                f"Article indicates cautious sentiment for {symbol} in near term.",
+                f"The article presents a bearish outlook for {symbol}, citing multiple headwinds and unfavorable market conditions. Key concerns include declining metrics, competitive pressures, or structural challenges that may limit upside potential. While the pessimism appears well-reasoned based on presented evidence, extreme negative sentiment historically has coincided with attractive entry points for patient investors. The measured, analytical tone of the coverage suggests professional concern rather than retail panic. Risk-reward assessment should account for potential value at current depressed sentiment levels.",
+                f"Cautious sentiment prevails in {symbol} analysis, with the article methodically outlining challenges facing the asset. The pessimistic outlook is supported by data-driven arguments about fundamentals, competition, and macro factors. Short-term price action likely to remain subdued until catalyst emergence. The article's avoidance of sensationalism while maintaining bearish stance suggests informed skepticism rather than uninformed fear. Accumulation opportunities may emerge for those with longer time horizons and higher risk tolerance.",
             ],
         }
         
@@ -340,7 +428,7 @@ class SentimentService:
                 symbol=data.get("symbol", "BTCUSDT").upper(),
                 sentiment=max(-1, min(1, float(data.get("sentiment", 0)))),
                 emotion=emotion,
-                reason=data.get("reason", "Analysis completed.")[:500]
+                reason=data.get("reason", "Analysis completed.")[:1500]  # Increased limit for detailed analysis
             )
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             logger.error(f"Failed to parse LLM response: {e}")

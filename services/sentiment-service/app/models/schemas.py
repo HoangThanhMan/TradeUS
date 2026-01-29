@@ -86,9 +86,9 @@ class SentimentAnalysisResult(BaseModel):
     )
     reason: str = Field(
         ...,
-        max_length=500,
-        description="Brief explanation for the sentiment analysis result",
-        examples=["Strong positive sentiment due to institutional adoption news"]
+        max_length=2000,
+        description="Comprehensive explanation for the sentiment analysis result",
+        examples=["The article presents a constructive outlook driven by favorable market conditions and growing institutional interest. Key catalysts include expanding adoption metrics and positive on-chain data."]
     )
 
 
@@ -127,7 +127,6 @@ class SentimentDocument(BaseModel):
                 "created_at": "2026-01-05T12:00:00Z"
             }
         }
-
 
 class SentimentResponse(BaseModel):
     """
