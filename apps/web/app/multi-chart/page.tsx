@@ -17,7 +17,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 // 1. Import Enum VIPStatus từ shared-types
 import { VipStatus, UserRole } from '@tradex/shared-types';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3002/prices';
+const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
 // 2. Định nghĩa URL API Gateway (để fetch profile)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 

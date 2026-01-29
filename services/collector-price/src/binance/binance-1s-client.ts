@@ -4,13 +4,6 @@ import WebSocket from 'ws';
 import axios from 'axios';
 import logger from '../logger';
 
-interface Trade {
-  symbol: string;
-  price: number;
-  quantity: number;
-  timestamp: number;
-}
-
 interface Candle1s {
   symbol: string;
   timestamp: number;
@@ -198,21 +191,6 @@ export class Binance1sClient {
     }
   }
 
-  private startCandleEmission(): void {
-    // Emit current candle state every 1 second
-    this.emitInterval = setInterval(() => {
-      const now = Date.now();
-
-      Object.keys(this.aggregators).forEach((symbol) => {
-        const agg = this.aggregators[symbol];
-
-        this.emitCurrentCandle(symbol, agg, now);
-      });
-    }, 1000);
-
-    logger.info('Started 1s candle emission');
-  }
-
   private stopCandleEmission(): void {
     if (this.emitInterval) {
       clearInterval(this.emitInterval);
@@ -226,26 +204,6 @@ export class Binance1sClient {
     const candle: Candle1s = {
       symbol,
       timestamp: agg.openTime + 999, 
-      open: agg.open,
-      high: agg.high,
-      low: agg.low,
-      close: agg.close,
-      volume: agg.volume,
-      quoteVolume: agg.quoteVolume,
-      openTime: agg.openTime,
-      closeTime: agg.openTime + 999,
-      trades: agg.trades,
-    };
-
-    this.onCandleCallback(candle);
-  }
-
-  private emitCurrentCandle(symbol: string, agg: any, timestamp: number): void {
-    if (!this.onCandleCallback) return;
-
-    const candle: Candle1s = {
-      symbol,
-      timestamp,
       open: agg.open,
       high: agg.high,
       low: agg.low,
@@ -296,10 +254,10 @@ export class Binance1sClient {
       response.data.forEach((kline: any[]) => {
         const [openTime, open, high, low, close, volume] = kline;
         const o = parseFloat(open);
-        const h = parseFloat(high);
-        const l = parseFloat(low);
         const c = parseFloat(close);
         const v = parseFloat(volume);
+        // high and low from kline are used for reference but we generate synthetic values
+        void high; void low;
 
         for (let i = 0; i < 60; i++) {
           const ratio = i / 60;

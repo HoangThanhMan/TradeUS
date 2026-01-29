@@ -19,9 +19,8 @@ const pjs = Plus_Jakarta_Sans({
   weight: ['500', '600', '700'],
 });
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3002/prices';
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 export default function BacktestPage() {
   const router = useRouter();

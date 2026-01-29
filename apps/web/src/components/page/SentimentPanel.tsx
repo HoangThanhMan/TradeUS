@@ -9,7 +9,7 @@ import {
   SentimentAlertData,
 } from '../../hooks/useSentimentWebSocket';
 
-const SENTIMENT_WS_URL = process.env.NEXT_PUBLIC_SENTIMENT_WS_URL || 'http://localhost:3002/sentiment';
+const SENTIMENT_WS_URL = process.env.NEXT_PUBLIC_SENTIMENT_WS_URL || 'http://localhost/sentiment';
 
 interface SentimentNews {
   id: string;
