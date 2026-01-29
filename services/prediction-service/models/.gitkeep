@@ -1,0 +1,6 @@
+# Model files directory
+# Place trained .pt model files here
+
+# Example model files:
+# - crypto_predictor_btcusdt.pt (BTCUSDT 1h model)
+# - crypto_predictor_ethusdt.pt (ETHUSDT 1h model)

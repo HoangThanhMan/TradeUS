@@ -408,6 +408,31 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
     };
   }, [symbol, onVolPaneCreated]);
 
+  // Handle resize when container size changes (e.g., when panel opens/closes)
+  useEffect(() => {
+    if (!chartRef.current || !chartInstance.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (chartInstance.current && entries[0]) {
+        // Debounce resize to avoid too many calls
+        requestAnimationFrame(() => {
+          try {
+            chartInstance.current.resize();
+            console.log('📐 Chart resized to fit container');
+          } catch (e) {
+            console.warn('Could not resize chart:', e);
+          }
+        });
+      }
+    });
+
+    resizeObserver.observe(chartRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [chartReady]);
+
   useEffect(() => {
     if (chartInstance.current && candles.length > 0) {
       const recentCandles = candles.slice(-1000);
@@ -566,18 +591,24 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
 
   return (
     <div className="w-full h-full flex flex-col bg-white relative overflow-hidden">
-      {isLocked && (
-        <div className="absolute top-2 right-2 z-40 bg-yellow-100 border border-yellow-400 text-yellow-800 px-2 py-1 rounded-md flex items-center gap-1 text-xs">
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>Chart Locked</span>
-        </div>
-      )}
+      {/* Status bar */}
+      <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur px-3 py-1.5 rounded shadow-sm text-xs flex items-center gap-3 border border-gray-200">
+        {isLocked && (
+          <span className="flex items-center gap-1 text-yellow-600">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Locked
+          </span>
+        )}
+        <span className={`flex items-center gap-1.5 ${candles.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+          <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+          Live
+        </span>
+        <span className="text-gray-600">
+          {candles.length} candles
+        </span>
+      </div>
 
       {chartReady && volPaneId && (
         <div className="absolute bottom-1 left-0 right-0 z-30 mr-10 flex items-center justify-end px-2 py-0.5 gap-0.5">

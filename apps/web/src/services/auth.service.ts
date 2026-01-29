@@ -18,10 +18,10 @@ export const authService = {
         email,
         password,
       });
-      if (response.data.access_token) {
-        localStorage.setItem('accessToken', response.data.access_token);
-        if (response.data.refresh_token) {
-           localStorage.setItem('refreshToken', response.data.refresh_token);
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+        if (response.data.refreshToken) {
+           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
       }
       return response.data;
@@ -38,8 +38,8 @@ export const authService = {
         username,
       });
       
-      if (response.data.access_token) {
-        localStorage.setItem('accessToken', response.data.access_token);
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
       }
       
       return response.data;
@@ -83,8 +83,8 @@ export const authService = {
           refreshToken: refreshToken
       });
       
-      if (response.data.access_token) {
-        localStorage.setItem('accessToken', response.data.access_token);
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
       }
       return response.data;
   }

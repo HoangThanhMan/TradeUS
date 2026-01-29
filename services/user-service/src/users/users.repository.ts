@@ -6,12 +6,11 @@ import { AbstractRepository, User, UserDocument } from '@tradex/database';
 // UsersRepository handles data operations related to User documents in MongoDB
 @Injectable()
 export class UsersRepository extends AbstractRepository<UserDocument> {
-  protected readonly logger: Logger;
+  protected readonly logger = new Logger(UsersRepository.name);
 
   // Initialize the repository with the User model
   constructor(@InjectModel(User.name) userModel: Model<UserDocument>) {
     super(userModel);
-    this.logger = new Logger(UsersRepository.name);
   }
 
   // Find a user by their email address

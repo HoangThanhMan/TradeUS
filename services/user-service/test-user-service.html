@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Service API Tester</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+    h1 { text-align: center; color: #00d4ff; margin-bottom: 20px; }
+    h2 { color: #00d4ff; margin: 15px 0 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    h3 { color: #ff6b6b; margin: 10px 0 5px; font-size: 14px; }
+    
+    .container { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section { background: #16213e; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+    .full-width { grid-column: 1 / -1; }
+    
+    .config-bar { background: #0f3460; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    .config-bar label { font-weight: bold; }
+    .config-bar input { padding: 8px 12px; border-radius: 5px; border: none; background: #1a1a2e; color: #fff; }
+    
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; margin-bottom: 3px; font-size: 12px; color: #aaa; }
+    .form-group input, .form-group select, .form-group textarea { 
+      width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; 
+      background: #1a1a2e; color: #fff; font-size: 13px;
+    }
+    .form-group textarea { min-height: 60px; resize: vertical; }
+    
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    
+    button { 
+      background: linear-gradient(135deg, #00d4ff, #0099cc); color: #fff; 
+      border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; 
+      font-weight: bold; transition: transform 0.2s; margin-right: 5px; margin-top: 5px;
+    }
+    button:hover { transform: scale(1.02); }
+    button.danger { background: linear-gradient(135deg, #ff6b6b, #cc0000); }
+    button.success { background: linear-gradient(135deg, #00ff88, #00cc66); }
+    button.warning { background: linear-gradient(135deg, #ffaa00, #cc8800); }
+    
+    .response-box { 
+      background: #0a0a1a; border-radius: 5px; padding: 10px; margin-top: 10px; 
+      max-height: 300px; overflow: auto; font-family: monospace; font-size: 12px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .response-box.success { border-left: 3px solid #00ff88; }
+    .response-box.error { border-left: 3px solid #ff6b6b; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 10px 0; }
+    .stat-card { background: #0f3460; padding: 15px; border-radius: 8px; text-align: center; }
+    .stat-card .value { font-size: 24px; font-weight: bold; color: #00d4ff; }
+    .stat-card .label { font-size: 11px; color: #aaa; margin-top: 5px; }
+    
+    .user-card { background: #0f3460; padding: 10px; border-radius: 5px; margin: 5px 0; display: flex; justify-content: space-between; align-items: center; }
+    .user-card .info { flex: 1; }
+    .user-card .name { font-weight: bold; color: #00d4ff; }
+    .user-card .email { font-size: 12px; color: #aaa; }
+    .user-card .role { padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+    .role-admin { background: #ff6b6b; }
+    .role-vip { background: #ffaa00; color: #000; }
+    .role-user { background: #333; }
+    .status-pending { background: #ffaa00; color: #000; }
+    .status-approved { background: #00ff88; color: #000; }
+    .status-rejected { background: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <h1>🧪 User Service API Tester</h1>
+  
+  <div class="config-bar">
+    <label>Base URL:</label>
+    <input type="text" id="baseUrl" value="http://localhost:3001" style="width: 250px;">
+    <button onclick="testConnection()">Test Connection</button>
+    <span id="connectionStatus"></span>
+  </div>
+
+  <div class="container">
+    <!-- Left Column -->
+    <div>
+      <!-- Create User -->
+      <div class="section">
+        <h2>👤 Create User</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="createUsername" placeholder="johndoe">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="createEmail" placeholder="john@example.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="createName" placeholder="John Doe">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="createPassword" placeholder="password123">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="createRole">
+            <option value="user">User</option>
+            <option value="vip">VIP</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button class="success" onclick="createUser()">Create User</button>
+        <div id="createUserResponse" class="response-box"></div>
+      </div>
+
+      <!-- Get Users -->
+      <div class="section">
+        <h2>📋 Get Users (with Filters)</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Search (name/email)</label>
+            <input type="text" id="searchTerm" placeholder="Search...">
+          </div>
+          <div class="form-group">
+            <label>Role Filter</label>
+            <select id="roleFilter">
+              <option value="">All Roles</option>
+              <option value="user">User</option>
+              <option value="vip">VIP</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>VIP Status Filter</label>
+            <select id="statusFilter">
+              <option value="">All Status</option>
+              <option value="none">None</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Page / Limit</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="number" id="page" value="1" min="1" style="width: 60px;">
+              <input type="number" id="limit" value="10" min="1" style="width: 60px;">
+            </div>
+          </div>
+        </div>
+        <button onclick="getUsers()">Get Users</button>
+        <div id="usersListContainer"></div>
+        <div id="getUsersResponse" class="response-box"></div>
+      </div>
+
+      <!-- Get Single User -->
+      <div class="section">
+        <h2>🔍 Get User by ID</h2>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="getUserId" placeholder="Enter user ID">
+        </div>
+        <button onclick="getUser()">Get User</button>
+        <button onclick="getUserByEmail()">Get by Email</button>
+        <button onclick="getUserByUsername()">Get by Username</button>
+        <div id="getUserResponse" class="response-box"></div>
+      </div>
+
+      <!-- Update User -->
+      <div class="section">
+        <h2>✏️ Update User</h2>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="updateUserId" placeholder="Enter user ID">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="updateName" placeholder="New name">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="updateEmail" placeholder="New email">
+          </div>
+        </div>
+        <button onclick="updateUser()">Update User</button>
+        <button class="danger" onclick="deleteUser()">Delete User</button>
+        <div id="updateUserResponse" class="response-box"></div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div>
+      <!-- Admin Stats -->
+      <div class="section">
+        <h2>📊 Admin Statistics</h2>
+        <button onclick="getAdminStats()">Refresh Stats</button>
+        <div id="statsContainer" class="stats-grid"></div>
+        <div id="statsResponse" class="response-box"></div>
+      </div>
+
+      <!-- QR Config -->
+      <div class="section">
+        <h2>💳 QR Configuration</h2>
+        <h3>Get Current Config</h3>
+        <button onclick="getQRConfig()">Get Active QR Config</button>
+        <button onclick="getAllQRConfigs()">Get All Configs</button>
+        <div id="qrConfigResponse" class="response-box"></div>
+        
+        <h3>Create/Update QR Config</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bank ID</label>
+            <input type="text" id="bankId" placeholder="VCB">
+          </div>
+          <div class="form-group">
+            <label>Account Number</label>
+            <input type="text" id="accountNo" placeholder="1234567890">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Account Name</label>
+            <input type="text" id="accountName" placeholder="NGUYEN VAN A">
+          </div>
+          <div class="form-group">
+            <label>Template</label>
+            <input type="text" id="qrTemplate" value="compact2" placeholder="compact2">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Monthly Amount (VND)</label>
+            <input type="number" id="monthlyAmount" value="99000">
+          </div>
+          <div class="form-group">
+            <label>Yearly Amount (VND)</label>
+            <input type="number" id="yearlyAmount" value="999000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Config ID (for update, leave empty to create)</label>
+          <input type="text" id="qrConfigId" placeholder="Leave empty to create new">
+        </div>
+        <button class="success" onclick="createQRConfig()">Create Config</button>
+        <button class="warning" onclick="updateQRConfig()">Update Config</button>
+        <div id="updateQRResponse" class="response-box"></div>
+      </div>
+
+      <!-- Payment Management -->
+      <div class="section">
+        <h2>💰 Payment Management</h2>
+        <h3>Get Payments</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Filter by User ID</label>
+            <input type="text" id="paymentFilterUserId" placeholder="Leave empty for all">
+          </div>
+          <div class="form-group">
+            <label>Filter by Status</label>
+            <select id="paymentFilterStatus">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="getAllPayments()">Get All Payments</button>
+        <button onclick="getPaymentStats()">Get Payment Stats</button>
+        <div id="paymentsListResponse" class="response-box"></div>
+        
+        <h3>Create Payment</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>User ID</label>
+            <input type="text" id="paymentUserId" placeholder="User ID">
+          </div>
+          <div class="form-group">
+            <label>Amount (VND)</label>
+            <input type="number" id="paymentAmount" value="99000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="paymentDescription" placeholder="VIP Upgrade - Monthly">
+        </div>
+        <button class="success" onclick="createPayment()">Create Payment</button>
+        <div id="createPaymentResponse" class="response-box"></div>
+        
+        <h3>Update Payment Status</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Payment ID</label>
+            <input type="text" id="paymentId" placeholder="Payment ID">
+          </div>
+          <div class="form-group">
+            <label>New Status</label>
+            <select id="paymentNewStatus">
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>VIP Expiry Days (if completing)</label>
+          <input type="number" id="paymentExpiryDays" value="30">
+        </div>
+        <button class="warning" onclick="updatePaymentStatus()">Update Status</button>
+        <div id="updatePaymentStatusResponse" class="response-box"></div>
+      </div>
+
+      <!-- VIP Workflow -->
+      <div class="section">
+        <h2>⭐ VIP Workflow</h2>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="vipUserId" placeholder="Enter user ID">
+        </div>
+        
+        <h3>Request VIP Upgrade (User Action)</h3>
+        <div class="form-group">
+          <label>Transaction ID (optional)</label>
+          <input type="text" id="transactionId" placeholder="TXN123456">
+        </div>
+        <button class="success" onclick="requestVipUpgrade()">Request Upgrade</button>
+        
+        <h3>Approve VIP (Admin Action)</h3>
+        <div class="form-group">
+          <label>Expiry Days</label>
+          <input type="number" id="expiryDays" value="30">
+        </div>
+        <button class="success" onclick="approveVip()">Approve VIP</button>
+        
+        <h3>Reject VIP (Admin Action)</h3>
+        <div class="form-group">
+          <label>Rejection Reason</label>
+          <input type="text" id="rejectionReason" placeholder="Invalid payment proof">
+        </div>
+        <button class="danger" onclick="rejectVip()">Reject VIP</button>
+        
+        <h3>Revoke VIP (Admin Action)</h3>
+        <button class="danger" onclick="revokeVip()">Revoke VIP Status</button>
+        
+        <div id="vipResponse" class="response-box"></div>
+      </div>
+
+      <!-- Role & Password -->
+      <div class="section">
+        <h2>🔐 Role & Password</h2>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="roleUserId" placeholder="Enter user ID">
+        </div>
+        
+        <h3>Update Role</h3>
+        <div class="form-group">
+          <label>New Role</label>
+          <select id="newRole">
+            <option value="user">User</option>
+            <option value="vip">VIP</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button class="warning" onclick="updateRole()">Update Role</button>
+        
+        <h3>Change Password</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Old Password</label>
+            <input type="password" id="oldPassword" placeholder="Current password">
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="newPassword" placeholder="New password">
+          </div>
+        </div>
+        <button onclick="changePassword()">Change Password</button>
+        
+        <div id="roleResponse" class="response-box"></div>
+      </div>
+
+      <!-- Avatar Upload -->
+      <div class="section">
+        <h2>🖼️ Avatar Upload</h2>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="avatarUserId" placeholder="Enter user ID">
+        </div>
+        <div class="form-group">
+          <label>Avatar Image</label>
+          <input type="file" id="avatarFile" accept="image/*">
+        </div>
+        <button onclick="uploadAvatar()">Upload Avatar</button>
+        <div id="avatarResponse" class="response-box"></div>
+        <div id="avatarPreview" style="margin-top: 10px;"></div>
+      </div>
+
+      <!-- QR Code Generator -->
+      <div class="section">
+        <h2>📱 QR Code Generator</h2>
+        
+        <h3>Payment QR Code</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Amount (VND) - leave empty to use config</label>
+            <input type="number" id="qrAmount" placeholder="Auto from config">
+          </div>
+          <div class="form-group">
+            <label>Package Type</label>
+            <select id="qrPackageType">
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="qrDescription" placeholder="VIP Upgrade Payment">
+        </div>
+        <button class="success" onclick="getPaymentQR()">Generate Payment QR</button>
+        <button onclick="getVietQR()">Generate VietQR</button>
+        
+        <h3>Custom QR Code</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Content</label>
+            <input type="text" id="qrContent" placeholder="Any text or URL">
+          </div>
+          <div class="form-group">
+            <label>Width (px)</label>
+            <input type="number" id="qrWidth" value="256">
+          </div>
+        </div>
+        <button onclick="getCustomQR()">Generate Custom QR</button>
+        
+        <div id="qrResponse" class="response-box"></div>
+        <div id="qrPreview" style="margin-top: 15px; text-align: center;"></div>
+        <div id="qrPaymentInfo" style="margin-top: 10px; padding: 10px; background: #0f3460; border-radius: 5px; display: none;">
+          <h4 style="color: #00d4ff; margin-bottom: 10px;">Payment Information</h4>
+          <div id="paymentDetails"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const getBaseUrl = () => document.getElementById('baseUrl').value;
+
+    async function apiCall(method, endpoint, body = null, isFormData = false) {
+      const url = `${getBaseUrl()}${endpoint}`;
+      const options = { method, headers: {} };
+      
+      if (body && !isFormData) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      } else if (body && isFormData) {
+        options.body = body;
+      }
+
+      try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        return { success: response.ok, status: response.status, data };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }
+
+    function showResponse(elementId, result) {
+      const el = document.getElementById(elementId);
+      el.className = 'response-box ' + (result.success ? 'success' : 'error');
+      el.textContent = JSON.stringify(result, null, 2);
+    }
+
+    async function testConnection() {
+      const status = document.getElementById('connectionStatus');
+      status.textContent = 'Testing...';
+      try {
+        const response = await fetch(`${getBaseUrl()}/users?limit=1`);
+        status.textContent = response.ok ? '✅ Connected' : '❌ Error';
+        status.style.color = response.ok ? '#00ff88' : '#ff6b6b';
+      } catch (e) {
+        status.textContent = '❌ Failed to connect';
+        status.style.color = '#ff6b6b';
+      }
+    }
+
+    // ========== CRUD Operations ==========
+    async function createUser() {
+      const result = await apiCall('POST', '/users', {
+        username: document.getElementById('createUsername').value,
+        email: document.getElementById('createEmail').value,
+        name: document.getElementById('createName').value,
+        password: document.getElementById('createPassword').value,
+        role: document.getElementById('createRole').value
+      });
+      showResponse('createUserResponse', result);
+    }
+
+    async function getUsers() {
+      const params = new URLSearchParams();
+      params.append('page', document.getElementById('page').value);
+      params.append('limit', document.getElementById('limit').value);
+      
+      const search = document.getElementById('searchTerm').value;
+      const role = document.getElementById('roleFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      
+      if (search) params.append('search', search);
+      if (role) params.append('role', role);
+      if (status) params.append('status', status);
+
+      const result = await apiCall('GET', `/users?${params.toString()}`);
+      showResponse('getUsersResponse', result);
+      
+      // Render user cards
+      const container = document.getElementById('usersListContainer');
+      if (result.success && result.data.users) {
+        container.innerHTML = result.data.users.map(user => `
+          <div class="user-card">
+            <div class="info">
+              <div class="name">${user.name || user.username}</div>
+              <div class="email">${user.email} | ID: ${user._id || user.id}</div>
+            </div>
+            <span class="role role-${user.role}">${user.role.toUpperCase()}</span>
+            ${user.vipStatus ? `<span class="role status-${user.vipStatus}">${user.vipStatus}</span>` : ''}
+          </div>
+        `).join('');
+      }
+    }
+
+    async function getUser() {
+      const id = document.getElementById('getUserId').value;
+      const result = await apiCall('GET', `/users/${id}`);
+      showResponse('getUserResponse', result);
+    }
+
+    async function getUserByEmail() {
+      const email = document.getElementById('getUserId').value;
+      const result = await apiCall('GET', `/users/by-email/${encodeURIComponent(email)}`);
+      showResponse('getUserResponse', result);
+    }
+
+    async function getUserByUsername() {
+      const username = document.getElementById('getUserId').value;
+      const result = await apiCall('GET', `/users/by-username/${username}`);
+      showResponse('getUserResponse', result);
+    }
+
+    async function updateUser() {
+      const id = document.getElementById('updateUserId').value;
+      const body = {};
+      const name = document.getElementById('updateName').value;
+      const email = document.getElementById('updateEmail').value;
+      if (name) body.name = name;
+      if (email) body.email = email;
+      
+      const result = await apiCall('PUT', `/users/${id}`, body);
+      showResponse('updateUserResponse', result);
+    }
+
+    async function deleteUser() {
+      const id = document.getElementById('updateUserId').value;
+      if (!confirm('Are you sure you want to delete this user?')) return;
+      const result = await apiCall('DELETE', `/users/${id}`);
+      showResponse('updateUserResponse', result);
+    }
+
+    // ========== Admin Stats ==========
+    async function getAdminStats() {
+      const result = await apiCall('GET', '/users/admin/stats');
+      showResponse('statsResponse', result);
+      
+      if (result.success) {
+        const stats = result.data;
+        document.getElementById('statsContainer').innerHTML = `
+          <div class="stat-card"><div class="value">${stats.totalUsers}</div><div class="label">Total Users</div></div>
+          <div class="stat-card"><div class="value">${stats.totalVipUsers}</div><div class="label">VIP Users</div></div>
+          <div class="stat-card"><div class="value">${stats.pendingVipRequests}</div><div class="label">Pending VIP</div></div>
+          <div class="stat-card"><div class="value">${stats.activeVipUsers}</div><div class="label">Active VIP</div></div>
+          <div class="stat-card"><div class="value">${stats.expiredVipUsers}</div><div class="label">Expired VIP</div></div>
+        `;
+      }
+    }
+
+    // ========== QR Config ==========
+    async function getQRConfig() {
+      const result = await apiCall('GET', '/users/config/qr');
+      showResponse('qrConfigResponse', result);
+      
+      if (result.success && result.data) {
+        document.getElementById('bankId').value = result.data.bankId || '';
+        document.getElementById('accountNo').value = result.data.accountNo || '';
+        document.getElementById('accountName').value = result.data.accountName || '';
+        document.getElementById('qrTemplate').value = result.data.template || 'compact2';
+        document.getElementById('monthlyAmount').value = result.data.monthlyAmount || 99000;
+        document.getElementById('yearlyAmount').value = result.data.yearlyAmount || 999000;
+        if (result.data.id || result.data._id) {
+          document.getElementById('qrConfigId').value = result.data.id || result.data._id;
+        }
+      }
+    }
+
+    async function getAllQRConfigs() {
+      const result = await apiCall('GET', '/users/config/qr/all');
+      showResponse('qrConfigResponse', result);
+    }
+
+    async function createQRConfig() {
+      const result = await apiCall('POST', '/users/config/qr?adminId=admin', {
+        bankId: document.getElementById('bankId').value,
+        accountNo: document.getElementById('accountNo').value,
+        accountName: document.getElementById('accountName').value,
+        template: document.getElementById('qrTemplate').value,
+        monthlyAmount: parseInt(document.getElementById('monthlyAmount').value),
+        yearlyAmount: parseInt(document.getElementById('yearlyAmount').value),
+        isActive: true
+      });
+      showResponse('updateQRResponse', result);
+    }
+
+    async function updateQRConfig() {
+      const configId = document.getElementById('qrConfigId').value;
+      if (!configId) {
+        showResponse('updateQRResponse', { success: false, error: 'Please enter a Config ID or get config first' });
+        return;
+      }
+      const result = await apiCall('PUT', `/users/config/qr/${configId}?adminId=admin`, {
+        bankId: document.getElementById('bankId').value,
+        accountNo: document.getElementById('accountNo').value,
+        accountName: document.getElementById('accountName').value,
+        template: document.getElementById('qrTemplate').value,
+        monthlyAmount: parseInt(document.getElementById('monthlyAmount').value),
+        yearlyAmount: parseInt(document.getElementById('yearlyAmount').value)
+      });
+      showResponse('updateQRResponse', result);
+    }
+
+    // ========== Payment Management ==========
+    async function getAllPayments() {
+      let url = '/users/payments?page=1&limit=10';
+      const userId = document.getElementById('paymentFilterUserId').value;
+      const status = document.getElementById('paymentFilterStatus').value;
+      if (userId) url += `&userId=${userId}`;
+      if (status) url += `&status=${status}`;
+      const result = await apiCall('GET', url);
+      showResponse('paymentsListResponse', result);
+    }
+
+    async function getPaymentStats() {
+      const result = await apiCall('GET', '/users/payments/stats');
+      showResponse('paymentsListResponse', result);
+    }
+
+    async function createPayment() {
+      const userId = document.getElementById('paymentUserId').value;
+      if (!userId) {
+        showResponse('createPaymentResponse', { success: false, error: 'User ID is required' });
+        return;
+      }
+      const result = await apiCall('POST', `/users/payments?userId=${userId}`, {
+        amount: parseInt(document.getElementById('paymentAmount').value),
+        description: document.getElementById('paymentDescription').value,
+        currency: 'VND',
+        paymentMethod: 'qr_transfer'
+      });
+      showResponse('createPaymentResponse', result);
+    }
+
+    async function updatePaymentStatus() {
+      const paymentId = document.getElementById('paymentId').value;
+      if (!paymentId) {
+        showResponse('updatePaymentStatusResponse', { success: false, error: 'Payment ID is required' });
+        return;
+      }
+      const result = await apiCall('PUT', `/users/payments/${paymentId}/status?adminId=admin`, {
+        status: document.getElementById('paymentNewStatus').value,
+        expiryDays: parseInt(document.getElementById('paymentExpiryDays').value)
+      });
+      showResponse('updatePaymentStatusResponse', result);
+    }
+
+    // ========== VIP Workflow ==========
+    async function requestVipUpgrade() {
+      const id = document.getElementById('vipUserId').value;
+      const result = await apiCall('POST', `/users/${id}/upgrade-request`, {
+        transactionId: document.getElementById('transactionId').value
+      });
+      showResponse('vipResponse', result);
+    }
+
+    async function approveVip() {
+      const id = document.getElementById('vipUserId').value;
+      const result = await apiCall('PUT', `/users/${id}/vip`, {
+        expiryDays: parseInt(document.getElementById('expiryDays').value)
+      });
+      showResponse('vipResponse', result);
+    }
+
+    async function rejectVip() {
+      const id = document.getElementById('vipUserId').value;
+      const result = await apiCall('PUT', `/users/${id}/reject-vip`, {
+        reason: document.getElementById('rejectionReason').value
+      });
+      showResponse('vipResponse', result);
+    }
+
+    async function revokeVip() {
+      const id = document.getElementById('vipUserId').value;
+      if (!confirm('Are you sure you want to revoke VIP status?')) return;
+      const result = await apiCall('DELETE', `/users/${id}/vip`);
+      showResponse('vipResponse', result);
+    }
+
+    // ========== Role & Password ==========
+    async function updateRole() {
+      const id = document.getElementById('roleUserId').value;
+      const result = await apiCall('PUT', `/users/${id}/role`, {
+        role: document.getElementById('newRole').value
+      });
+      showResponse('roleResponse', result);
+    }
+
+    async function changePassword() {
+      const id = document.getElementById('roleUserId').value;
+      const result = await apiCall('PUT', `/users/${id}/password`, {
+        oldPassword: document.getElementById('oldPassword').value,
+        newPassword: document.getElementById('newPassword').value
+      });
+      showResponse('roleResponse', result);
+    }
+
+    // ========== Avatar Upload ==========
+    async function uploadAvatar() {
+      const id = document.getElementById('avatarUserId').value;
+      const fileInput = document.getElementById('avatarFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showResponse('avatarResponse', { success: false, error: 'Please select a file' });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const result = await apiCall('POST', `/users/${id}/avatar`, formData, true);
+      showResponse('avatarResponse', result);
+      
+      if (result.success && result.data.avatar) {
+        document.getElementById('avatarPreview').innerHTML = `
+          <img src="${result.data.avatar}" style="max-width: 100px; max-height: 100px; border-radius: 50%;">
+        `;
+      }
+    }
+
+    // ========== QR Code ==========
+    async function getPaymentQR() {
+      const params = new URLSearchParams();
+      const amount = document.getElementById('qrAmount').value;
+      const description = document.getElementById('qrDescription').value;
+      const packageType = document.getElementById('qrPackageType').value;
+      
+      if (amount) params.append('amount', amount);
+      if (description) params.append('description', description);
+      params.append('type', packageType);
+
+      const result = await apiCall('GET', `/users/qr/payment?${params.toString()}`);
+      showResponse('qrResponse', result);
+      displayQRCode(result);
+    }
+
+    async function getVietQR() {
+      const params = new URLSearchParams();
+      const amount = document.getElementById('qrAmount').value;
+      const description = document.getElementById('qrDescription').value;
+      const packageType = document.getElementById('qrPackageType').value;
+      
+      if (amount) params.append('amount', amount);
+      if (description) params.append('description', description);
+      params.append('type', packageType);
+
+      const result = await apiCall('GET', `/users/qr/vietqr?${params.toString()}`);
+      showResponse('qrResponse', result);
+      displayQRCode(result);
+    }
+
+    async function getCustomQR() {
+      const content = document.getElementById('qrContent').value;
+      const width = document.getElementById('qrWidth').value;
+      
+      if (!content) {
+        showResponse('qrResponse', { success: false, error: 'Content is required' });
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.append('content', content);
+      if (width) params.append('width', width);
+
+      const result = await apiCall('GET', `/users/qr/custom?${params.toString()}`);
+      showResponse('qrResponse', result);
+      displayQRCode(result);
+    }
+
+    function displayQRCode(result) {
+      const qrPreview = document.getElementById('qrPreview');
+      const qrPaymentInfo = document.getElementById('qrPaymentInfo');
+      const paymentDetails = document.getElementById('paymentDetails');
+
+      if (result.success && result.data.qrCode) {
+        if (result.data.format === 'svg') {
+          qrPreview.innerHTML = result.data.qrCode;
+        } else {
+          qrPreview.innerHTML = `<img src="${result.data.qrCode}" style="max-width: 300px; border-radius: 10px; background: white; padding: 10px;">`;
+        }
+
+        if (result.data.paymentInfo) {
+          qrPaymentInfo.style.display = 'block';
+          const info = result.data.paymentInfo;
+          paymentDetails.innerHTML = `
+            <p><strong>Bank ID:</strong> ${info.bankId || info.bankName || 'N/A'}</p>
+            <p><strong>Account:</strong> ${info.accountNo || info.accountNumber || 'N/A'}</p>
+            <p><strong>Holder:</strong> ${info.accountName || info.accountHolder || 'N/A'}</p>
+            <p><strong>Amount:</strong> ${info.amount?.toLocaleString('vi-VN')} VND</p>
+            <p><strong>Description:</strong> ${info.description || 'N/A'}</p>
+          `;
+        } else {
+          qrPaymentInfo.style.display = 'none';
+        }
+      } else {
+        qrPreview.innerHTML = '<p style="color: #ff6b6b;">Failed to generate QR code</p>';
+        qrPaymentInfo.style.display = 'none';
+      }
+    }
+
+    // Auto-test connection on load
+    window.onload = () => {
+      testConnection();
+      getAdminStats();
+    };
+  </script>
+</body>
+</html>

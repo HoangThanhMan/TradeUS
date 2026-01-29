@@ -8,6 +8,9 @@ import { useChartData } from '../../src/hooks/useChartData';
 import { useDrawingManager } from '../../src/hooks/useDrawingManager';
 import { Header } from '../../src/components/page/Header';
 import { Sidebar } from '../../src/components/toolbars/LeftSidebar';
+import { RightSidebar, RightPanelType } from '../../src/components/page/RightSidebar';
+import { SentimentPanel } from '../../src/components/page/SentimentPanel';
+import { PredictionPanel } from '../../src/components/page/PredictionPanel';
 import { ChartToolbar } from '../../src/components/toolbars/ChartToolbar';
 import { InfoBar } from '../../src/components/toolbars/InfoBar';
 import { KLineChart } from '../../src/components/chart-tools/KLineChart';
@@ -26,6 +29,7 @@ export default function DashboardPage() {
   const [timeframe, setTimeframe] = useState('1m');
   const [chartType, setChartType] = useState('candle_solid');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const chartInstanceRef = useRef<any>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
@@ -102,8 +106,8 @@ export default function DashboardPage() {
           onClearAll={clearAllDrawings}
         />
 
-        <div className="flex-1 flex flex-col">
-          {/* 🔥 UPDATED: Pass onSymbolChange handler */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* ChartHeader for symbol selection */}
           <ChartHeader
             symbol={symbol}
             showChartNumber={false}
@@ -176,6 +180,28 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Right Side Panel */}
+        {activeRightPanel === 'sentiment' && (
+          <SentimentPanel 
+            symbol={symbol} 
+            onClose={() => setActiveRightPanel(null)} 
+          />
+        )}
+        {activeRightPanel === 'prediction' && (
+          <PredictionPanel 
+            symbol={symbol}
+            interval="1h"  // Use 1h interval for ML prediction
+            currentPrice={latestPrice} 
+            onClose={() => setActiveRightPanel(null)} 
+          />
+        )}
+
+        {/* Right Sidebar with icons */}
+        <RightSidebar 
+          activePanel={activeRightPanel} 
+          onPanelChange={setActiveRightPanel} 
+        />
       </div>
 
       <IndicatorManager

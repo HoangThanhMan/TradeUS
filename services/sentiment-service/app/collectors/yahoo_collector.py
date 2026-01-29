@@ -1,8 +1,3 @@
-"""
-Yahoo Finance news collector for cryptocurrency news.
-Uses yfinance library to collect news articles for crypto symbols.
-"""
-
 import asyncio
 import logging
 from datetime import datetime, timezone
@@ -17,7 +12,6 @@ from app.models.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class YahooCollector:
     """
@@ -102,28 +96,62 @@ class YahooCollector:
             
             for item in news[:limit]:
                 try:
-                    # Parse publish time
-                    publish_time = item.get("providerPublishTime", 0)
-                    if isinstance(publish_time, int):
-                        published_at = datetime.fromtimestamp(
-                            publish_time, tz=timezone.utc
-                        )
-                    else:
-                        published_at = datetime.now(timezone.utc)
+                    # New yfinance API structure: data is inside 'content' key
+                    content = item.get("content", item)
                     
-                    # Get thumbnail URL if available
+                    # Parse publish time - new API uses 'pubDate' in ISO format
+                    pub_date = content.get("pubDate")
+                    if pub_date:
+                        try:
+                            published_at = datetime.fromisoformat(
+                                pub_date.replace("Z", "+00:00")
+                            )
+                        except (ValueError, AttributeError):
+                            published_at = datetime.now(timezone.utc)
+                    else:
+                        # Fallback to old API format
+                        publish_time = content.get("providerPublishTime", 0)
+                        if isinstance(publish_time, int) and publish_time > 0:
+                            published_at = datetime.fromtimestamp(
+                                publish_time, tz=timezone.utc
+                            )
+                        else:
+                            published_at = datetime.now(timezone.utc)
+                    
+                    # Get thumbnail URL if available (new structure)
                     thumbnail_url = None
-                    if "thumbnail" in item and item["thumbnail"]:
-                        resolutions = item["thumbnail"].get("resolutions", [])
+                    thumbnail = content.get("thumbnail")
+                    if thumbnail:
+                        resolutions = thumbnail.get("resolutions", [])
                         if resolutions:
                             thumbnail_url = resolutions[0].get("url")
                     
+                    # Get link from canonicalUrl or clickThroughUrl (new API)
+                    link = ""
+                    canonical_url = content.get("canonicalUrl", {})
+                    click_through_url = content.get("clickThroughUrl", {})
+                    if canonical_url:
+                        link = canonical_url.get("url", "")
+                    if not link and click_through_url:
+                        link = click_through_url.get("url", "")
+                    # Fallback to old API
+                    if not link:
+                        link = content.get("link", "")
+                    
+                    # Get publisher (new structure)
+                    publisher = "Yahoo Finance"
+                    provider = content.get("provider", {})
+                    if provider:
+                        publisher = provider.get("displayName", "Yahoo Finance")
+                    else:
+                        publisher = content.get("publisher", "Yahoo Finance")
+                    
                     news_item = YahooNewsItem(
-                        uuid=item.get("uuid", ""),
-                        title=item.get("title", ""),
-                        summary=item.get("summary", item.get("title", "")),
-                        link=item.get("link", ""),
-                        publisher=item.get("publisher", "Yahoo Finance"),
+                        uuid=content.get("id", item.get("id", "")),
+                        title=content.get("title", ""),
+                        summary=content.get("summary", content.get("title", "")),
+                        link=link,
+                        publisher=publisher,
                         symbol=symbol,
                         published_at=published_at,
                         thumbnail_url=thumbnail_url,
@@ -254,73 +282,3 @@ class YahooCollector:
         
         # Generic conversion: remove dash, replace USD with USDT
         return yahoo_symbol.replace("-", "").replace("USD", "USDT")
-
-
-# Mock collector for development/testing
-class MockYahooCollector(YahooCollector):
-    """Mock Yahoo collector for testing without API access."""
-
-    async def collect_news(
-        self,
-        symbols: Optional[list[str]] = None,
-        limit: Optional[int] = None,
-    ) -> list[YahooNewsItem]:
-        """Return mock Yahoo Finance news for testing."""
-        from datetime import timedelta
-        import random
-        import uuid
-        
-        mock_news = [
-            {
-                "title": "Bitcoin ETF Sees Record Inflows as Institutional Demand Surges",
-                "summary": "The spot Bitcoin ETF has seen record-breaking inflows this week as institutional investors continue to allocate capital to cryptocurrency markets.",
-                "symbol": "BTC-USD",
-                "publisher": "Bloomberg",
-            },
-            {
-                "title": "Ethereum Foundation Announces Major Protocol Upgrade",
-                "summary": "The Ethereum Foundation has announced plans for a significant protocol upgrade that will improve scalability and reduce transaction costs.",
-                "symbol": "ETH-USD",
-                "publisher": "CoinDesk",
-            },
-            {
-                "title": "Crypto Markets Rally Amid Positive Regulatory News",
-                "summary": "Cryptocurrency markets are experiencing a broad rally following positive regulatory developments in major economies.",
-                "symbol": "BTC-USD",
-                "publisher": "Reuters",
-            },
-            {
-                "title": "Solana DeFi TVL Reaches New All-Time High",
-                "summary": "The total value locked in Solana DeFi protocols has reached a new all-time high, signaling growing confidence in the ecosystem.",
-                "symbol": "SOL-USD",
-                "publisher": "The Block",
-            },
-            {
-                "title": "Warning: Crypto Volatility Expected Ahead of Fed Decision",
-                "summary": "Analysts warn of potential volatility in cryptocurrency markets ahead of the Federal Reserve's upcoming interest rate decision.",
-                "symbol": "BTC-USD",
-                "publisher": "CNBC",
-            },
-        ]
-        
-        symbols = symbols or settings.yahoo_symbols_list
-        limit = limit or settings.yahoo_news_limit
-        
-        news_items = []
-        now = datetime.now(timezone.utc)
-        
-        for i, mock in enumerate(mock_news[:limit]):
-            if mock["symbol"] in symbols or not symbols:
-                news_items.append(YahooNewsItem(
-                    uuid=str(uuid.uuid4()),
-                    title=mock["title"],
-                    summary=mock["summary"],
-                    link=f"https://finance.yahoo.com/news/mock-article-{i}",
-                    publisher=mock["publisher"],
-                    symbol=mock["symbol"],
-                    published_at=now - timedelta(hours=random.randint(1, 48)),
-                    thumbnail_url=None,
-                ))
-        
-        logger.info(f"Generated {len(news_items)} mock Yahoo Finance news items")
-        return news_items

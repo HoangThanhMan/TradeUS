@@ -14,6 +14,8 @@ export interface ProxyRequestOptions {
 
 export enum ServiceName {
   USER = 'userService',
+  SENTIMENT = 'sentimentService',
+  PREDICTION = 'predictionService',
 }
 
 @Injectable()
@@ -28,6 +30,12 @@ export class ProxyService {
     this.serviceUrls = {
       [ServiceName.USER]: this.configService.get<string>(
         'services.userService',
+      )!,
+      [ServiceName.SENTIMENT]: this.configService.get<string>(
+        'services.sentimentService',
+      )!,
+      [ServiceName.PREDICTION]: this.configService.get<string>(
+        'services.predictionService',
       )!,
     };
   }

@@ -1,0 +1,56 @@
+# Node modules
+**/node_modules
+node_modules
+
+# Build outputs
+**/dist
+**/.turbo
+**/.next
+**/build
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+**/.vscode
+**/.idea
+
+# Environment files (use Docker env instead)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs
+**/logs
+**/*.log
+**/npm-debug.log*
+
+# Test files
+**/test
+**/tests
+**/__tests__
+**/coverage
+**/*.spec.ts
+**/*.test.ts
+
+# Documentation (optional - remove if needed in build)
+docs/
+*.md
+!packages/*/README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache (for sentiment-service)
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+
+# Misc
+**/.dockerignore
+**/Dockerfile
