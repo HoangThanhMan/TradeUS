@@ -1,4 +1,4 @@
-// src/components/chart/KLineChart.tsx
+// src/components/chart-tools/KLineChart.tsx
 'use client';
 
 import React, {
@@ -17,6 +17,11 @@ import type {
   YAxisPosition,
   YAxisType,
 } from 'klinecharts';
+import {
+  ChartSettings,
+  applySettings,
+  DEFAULT_CHART_SETTINGS,
+} from '../../hooks/useChartSettings';
 
 interface CandlestickData {
   time: number;
@@ -32,6 +37,7 @@ interface KLineChartProps {
   candles: CandlestickData[];
   symbol: string;
   chartType?: string;
+  settings?: ChartSettings;
   onVolPaneCreated?: (paneId: string) => void;
   isLocked?: boolean;
 }
@@ -41,6 +47,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
     candles,
     symbol,
     chartType = 'candle_solid',
+    settings = DEFAULT_CHART_SETTINGS,
     onVolPaneCreated,
     isLocked = false,
   },
@@ -52,85 +59,70 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
   const [volVisible, setVolVisible] = useState(true);
   const [showVolSettings, setShowVolSettings] = useState(false);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
-
   const lastDataCountRef = useRef<number>(0);
 
   useImperativeHandle(ref, () => chartInstance.current, [
     chartInstance.current,
   ]);
 
-  // 🔥 FIXED: Effect to update chart type with proper line chart handling
+  // ── Apply settings whenever they change ──
   useEffect(() => {
     if (!chartInstance.current || !chartReady) return;
+    applySettings(chartInstance.current, settings);
+  }, [settings, chartReady]);
 
-    console.log('🎨 Updating chart type to:', chartType);
-
+  // ── Chart type change ──
+  useEffect(() => {
+    if (!chartInstance.current || !chartReady) return;
     try {
       if (chartType === 'area') {
-        // 🔥 Line chart style (like Binance)
         chartInstance.current.setStyles({
           candle: {
             type: 'area' as CandleType,
             area: {
               lineSize: 2,
-              lineColor: '#F0B90B', // Yellow like Binance
+              lineColor: '#F0B90B',
               value: 'close',
-              backgroundColor: 'transparent', // No fill, just line
+              backgroundColor: 'transparent',
               smooth: true,
             },
-            priceMark: {
-              show: false, // Hide high/low marks for line chart
-            },
+            priceMark: { show: false },
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
           },
         });
       } else if (chartType === 'ohlc') {
-        // OHLC bars
         chartInstance.current.setStyles({
           candle: {
             type: 'ohlc' as CandleType,
             bar: {
-              upColor: '#0ecb81',
-              downColor: '#f6465d',
-              upBorderColor: '#0ecb81',
-              downBorderColor: '#f6465d',
-              upWickColor: '#0ecb81',
-              downWickColor: '#f6465d',
+              upColor: settings.candleUpColor,
+              downColor: settings.candleDownColor,
+              upBorderColor: settings.candleUpColor,
+              downBorderColor: settings.candleDownColor,
+              upWickColor: settings.candleUpColor,
+              downWickColor: settings.candleDownColor,
               noChangeColor: '#888888',
             },
             priceMark: {
-              show: true,
-              high: {
-                show: true,
-                color: '#0ecb81',
-              },
-              low: {
-                show: true,
-                color: '#f6465d',
-              },
+              show: settings.showPriceMark,
+              high: { show: true, color: settings.candleUpColor },
+              low: { show: true, color: settings.candleDownColor },
             },
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
           },
         });
       } else if (chartType === 'area_binance') {
-        // Hollow candles
         chartInstance.current.setStyles({
           candle: {
-            type: 'area',
+            type: 'area' as CandleType,
             area: {
               value: 'close',
               smooth: true,
@@ -142,83 +134,65 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
           },
         });
       } else {
-        // Default: candle_solid
+        // candle_solid — re-apply current settings colours
         chartInstance.current.setStyles({
           candle: {
             type: 'candle_solid' as CandleType,
             bar: {
-              upColor: '#0ecb81',
-              downColor: '#f6465d',
-              upBorderColor: '#0ecb81',
-              downBorderColor: '#f6465d',
-              upWickColor: '#0ecb81',
-              downWickColor: '#f6465d',
+              upColor: settings.candleUpColor,
+              downColor: settings.candleDownColor,
+              upBorderColor: settings.candleUpColor,
+              downBorderColor: settings.candleDownColor,
+              upWickColor: settings.candleUpColor,
+              downWickColor: settings.candleDownColor,
               noChangeColor: '#888888',
             },
             priceMark: {
-              show: true,
-              high: {
-                show: true,
-                color: '#0ecb81',
-              },
-              low: {
-                show: true,
-                color: '#f6465d',
-              },
+              show: settings.showPriceMark,
+              high: { show: true, color: settings.candleUpColor },
+              low: { show: true, color: settings.candleDownColor },
             },
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
           },
         });
       }
-    } catch (error) {
-      console.error('❌ Error updating chart type:', error);
+    } catch (e) {
+      console.error('❌ Error updating chart type:', e);
     }
-  }, [chartType, chartReady]);
+  }, [chartType, chartReady, settings]);
 
+  // ── Lock state ──
   useEffect(() => {
     if (!chartInstance.current) return;
-
-    console.log('🔒 Lock state changed:', isLocked);
-
     if (isLocked) {
       lastDataCountRef.current =
         chartInstance.current.getDataList()?.length || 0;
-      console.log('💾 Locked at', lastDataCountRef.current, 'candles');
     } else {
       lastDataCountRef.current = 0;
-      console.log('🔓 Unlocked - will show all data');
     }
-
     chartInstance.current.setZoomEnabled(!isLocked);
     chartInstance.current.setScrollEnabled(!isLocked);
   }, [isLocked]);
 
+  // ── Init chart ──
   useEffect(() => {
     if (!chartRef.current) return;
-
-    console.log('📈 Initializing KLineChart for', symbol);
 
     if (chartInstance.current) {
       try {
         dispose(chartRef.current);
         chartInstance.current = null;
       } catch (e) {
-        console.warn('Could not dispose previous chart:', e);
+        /* ignore */
       }
     }
 
@@ -228,12 +202,12 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           candle: {
             type: chartType as CandleType,
             bar: {
-              upColor: '#0ecb81',
-              downColor: '#f6465d',
-              upBorderColor: '#0ecb81',
-              downBorderColor: '#f6465d',
-              upWickColor: '#0ecb81',
-              downWickColor: '#f6465d',
+              upColor: settings.candleUpColor,
+              downColor: settings.candleDownColor,
+              upBorderColor: settings.candleUpColor,
+              downBorderColor: settings.candleDownColor,
+              upWickColor: settings.candleUpColor,
+              downWickColor: settings.candleDownColor,
               noChangeColor: '#888888',
             },
             area: {
@@ -244,33 +218,21 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
               smooth: true,
             },
             priceMark: {
-              show: chartType !== 'area', // Hide for line chart
-              high: {
-                show: true,
-                color: '#0ecb81',
-              },
-              low: {
-                show: true,
-                color: '#f6465d',
-              },
+              show: chartType !== 'area' && settings.showPriceMark,
+              high: { show: true, color: settings.candleUpColor },
+              low: { show: true, color: settings.candleDownColor },
             },
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
           },
           indicator: {
             tooltip: {
               showRule: 'always' as TooltipShowRule,
               showType: 'standard' as TooltipShowType,
-              text: {
-                size: 12,
-                color: '#666666',
-              },
+              text: { size: 12, color: '#666666' },
             },
             bars: [
               {
@@ -281,22 +243,17 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           },
           grid: {
             horizontal: {
-              show: true,
+              show: settings.showGrid,
               size: 1,
               color: '#e5e7eb',
               style: 'solid' as LineType,
             },
-            vertical: {
-              show: true,
-            },
+            vertical: { show: settings.showGrid },
           },
           crosshair: {
             horizontal: {
-              show: true,
-              line: {
-                color: '#9ca3af',
-                style: 'dashed' as LineType,
-              },
+              show: settings.showCrosshair,
+              line: { color: '#9ca3af', style: 'dashed' as LineType },
               text: {
                 show: true,
                 color: '#ffffff',
@@ -304,11 +261,8 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
               },
             },
             vertical: {
-              show: true,
-              line: {
-                color: '#9ca3af',
-                style: 'dashed' as LineType,
-              },
+              show: settings.showCrosshair,
+              line: { color: '#9ca3af', style: 'dashed' as LineType },
               text: {
                 show: true,
                 color: '#ffffff',
@@ -318,19 +272,9 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           },
           xAxis: {
             show: true,
-            axisLine: {
-              show: true,
-              color: '#e5e7eb',
-            },
-            tickLine: {
-              show: true,
-              color: '#e5e7eb',
-            },
-            tickText: {
-              show: true,
-              color: '#6b7280',
-              size: 11,
-            },
+            axisLine: { show: true, color: '#e5e7eb' },
+            tickLine: { show: true, color: '#e5e7eb' },
+            tickText: { show: true, color: '#6b7280', size: 11 },
           },
           yAxis: {
             show: true,
@@ -338,19 +282,9 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
             position: 'right' as YAxisPosition,
             inside: false,
             reverse: false,
-            axisLine: {
-              show: true,
-              color: '#e5e7eb',
-            },
-            tickLine: {
-              show: true,
-              color: '#e5e7eb',
-            },
-            tickText: {
-              show: true,
-              color: '#6b7280',
-              size: 11,
-            },
+            axisLine: { show: true, color: '#e5e7eb' },
+            tickLine: { show: true, color: '#e5e7eb' },
+            tickText: { show: true, color: '#6b7280', size: 11 },
           },
         },
         locale: 'en-US',
@@ -358,228 +292,135 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
 
       chartInstance.current.setZoomEnabled(!isLocked);
       chartInstance.current.setScrollEnabled(!isLocked);
-      chartInstance.current.setBarSpace(12);
+      chartInstance.current.setBarSpace(settings.barSpace);
 
-      // Create main pane with MA indicators
-      chartInstance.current.createIndicator('MA', false, {
-        id: 'candle_pane',
-      });
+      chartInstance.current.createIndicator('MA', false, { id: 'candle_pane' });
 
-      // Create volume pane and save its ID
       const volPane = chartInstance.current.createIndicator('VOL', false, {
         height: 0,
         minHeight: 60,
         maxHeight: 200,
         dragEnabled: false,
       });
-
       setVolPaneId(volPane);
       onVolPaneCreated?.(volPane);
 
       setTimeout(() => {
         if (chartInstance.current) {
-          chartInstance.current.setPaneOptions({
-            id: volPane,
-            height: 100,
-          });
+          chartInstance.current.setPaneOptions({ id: volPane, height: 100 });
           chartInstance.current.resize();
         }
       }, 10);
 
       setChartReady(true);
-      console.log('✅ Chart instance created successfully');
     } catch (error) {
       console.error('❌ Failed to initialize chart:', error);
     }
 
     return () => {
-      console.log('🧹 Cleaning up chart for', symbol);
       if (chartInstance.current) {
         try {
-          if (chartRef.current) {
-            dispose(chartRef.current);
-          }
+          if (chartRef.current) dispose(chartRef.current);
           chartInstance.current = null;
           setChartReady(false);
-        } catch (error) {
-          console.error('Error disposing chart:', error);
+        } catch (e) {
+          /* ignore */
         }
       }
     };
   }, [symbol, onVolPaneCreated]);
 
-  // Handle resize when container size changes (e.g., when panel opens/closes)
+  // ── Resize observer ──
   useEffect(() => {
     if (!chartRef.current || !chartInstance.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (chartInstance.current && entries[0]) {
-        // Debounce resize to avoid too many calls
+    const obs = new ResizeObserver(() => {
+      if (chartInstance.current) {
         requestAnimationFrame(() => {
           try {
             chartInstance.current.resize();
-            console.log('📐 Chart resized to fit container');
           } catch (e) {
-            console.warn('Could not resize chart:', e);
+            /* ignore */
           }
         });
       }
     });
-
-    resizeObserver.observe(chartRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
+    obs.observe(chartRef.current);
+    return () => obs.disconnect();
   }, [chartReady]);
 
+  // ── Update data ──
   useEffect(() => {
-    if (chartInstance.current && candles.length > 0) {
-      const recentCandles = candles.slice(-1000);
+    if (!chartInstance.current || candles.length === 0) return;
 
-      const formattedData = recentCandles
-        .filter((c) => {
-          if (!c || !c.time) return false;
+    const formatted = candles
+      .slice(-1000)
+      .filter((c) => {
+        if (!c || !c.time) return false;
+        const vals = [
+          Number(c.open),
+          Number(c.high),
+          Number(c.low),
+          Number(c.close),
+        ];
+        return vals.every((v) => !isNaN(v) && isFinite(v) && v > 0);
+      })
+      .map((c) => {
+        let o = Number(c.open),
+          h = Number(c.high),
+          l = Number(c.low),
+          cl = Number(c.close);
+        const v = Math.max(0, Number(c.volume || 0));
+        const maxOC = Math.max(o, cl),
+          minOC = Math.min(o, cl);
+        if (h < maxOC) h = maxOC;
+        if (l > minOC) l = minOC;
 
-          const o = Number(c.open);
-          const h = Number(c.high);
-          const l = Number(c.low);
-          const cl = Number(c.close);
-
-          if (isNaN(o) || isNaN(h) || isNaN(l) || isNaN(cl)) return false;
-          if (!isFinite(o) || !isFinite(h) || !isFinite(l) || !isFinite(cl))
-            return false;
-          if (o <= 0 || h <= 0 || l <= 0 || cl <= 0) return false;
-
-          return true;
-        })
-        .map((c) => {
-          let o = Number(c.open);
-          let h = Number(c.high);
-          let l = Number(c.low);
-          let cl = Number(c.close);
-          let v = Math.max(0, Number(c.volume || 0));
-
-          const maxOC = Math.max(o, cl);
-          const minOC = Math.min(o, cl);
-
-          if (h < maxOC) {
-            h = maxOC;
-          }
-          if (l > minOC) {
-            l = minOC;
-          }
-
-          const priceRange = h - l;
-          const avgPrice = (o + cl) / 2;
-          const MIN_BODY_RATIO = 0.0000012;
-          const minBodySize = avgPrice * MIN_BODY_RATIO;
-          const currentBodySize = Math.abs(cl - o);
-
-          if (currentBodySize < minBodySize) {
-            if (cl >= o) {
-              cl = o + minBodySize;
-            } else {
-              cl = o - minBodySize;
-            }
-            h = Math.max(h, cl);
-            l = Math.min(l, cl);
-          }
-
-          if (priceRange > avgPrice * 1.0) {
-            console.warn('🔧 Extreme range detected - capping:', {
-              time: new Date(c.time).toISOString(),
-              oldRange: priceRange.toFixed(2),
-              percent: ((priceRange / avgPrice) * 100).toFixed(1) + '%',
-            });
-
-            const cappedRange = avgPrice * 0.2;
-            h = Math.min(h, avgPrice + cappedRange);
-            l = Math.max(l, avgPrice - cappedRange);
-
-            h = Math.max(h, maxOC);
-            l = Math.min(l, minOC);
-          }
-
-          return {
-            timestamp: c.time,
-            open: o,
-            high: h,
-            low: l,
-            close: cl,
-            volume: v,
-          };
-        });
-
-      if (formattedData.length === 0) {
-        console.error('❌ No valid formatted data!');
-        return;
-      }
-
-      try {
-        const currentDataCount = formattedData.length;
-        const lockedDataCount = lastDataCountRef.current;
-
-        if (
-          isLocked &&
-          lockedDataCount > 0 &&
-          currentDataCount > lockedDataCount
-        ) {
-          console.log(
-            '🔒 Chart locked - showing only',
-            lockedDataCount,
-            'candles',
-          );
-          const lockedData = formattedData.slice(0, lockedDataCount);
-          chartInstance.current.applyNewData(lockedData);
-        } else {
-          console.log(
-            '📊 Updating chart with',
-            formattedData.length,
-            'candles',
-          );
-          chartInstance.current.applyNewData(formattedData);
+        const avg = (o + cl) / 2;
+        if (Math.abs(cl - o) < avg * 0.0000012) {
+          cl = cl >= o ? o + avg * 0.0000012 : o - avg * 0.0000012;
+          h = Math.max(h, cl);
+          l = Math.min(l, cl);
         }
+        if (h - l > avg * 1.0) {
+          const cap = avg * 0.2;
+          h = Math.min(h, avg + cap);
+          l = Math.max(l, avg - cap);
+          h = Math.max(h, maxOC);
+          l = Math.min(l, minOC);
+        }
+        return {
+          timestamp: c.time,
+          open: o,
+          high: h,
+          low: l,
+          close: cl,
+          volume: v,
+        };
+      });
 
-        setTimeout(() => {
-          if (chartInstance.current) {
-            chartInstance.current.resize();
-          }
-        }, 100);
-      } catch (error) {
-        console.error('❌ Error updating chart:', error);
+    if (formatted.length === 0) return;
+
+    try {
+      if (
+        isLocked &&
+        lastDataCountRef.current > 0 &&
+        formatted.length > lastDataCountRef.current
+      ) {
+        chartInstance.current.applyNewData(
+          formatted.slice(0, lastDataCountRef.current),
+        );
+      } else {
+        chartInstance.current.applyNewData(formatted);
       }
+      setTimeout(() => {
+        if (chartInstance.current) chartInstance.current.resize();
+      }, 100);
+    } catch (e) {
+      console.error('❌ Error updating chart:', e);
     }
   }, [candles, isLocked]);
 
-  useEffect(() => {
-    if (!chartRef.current || !chartInstance.current) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (chartInstance.current) {
-        chartInstance.current.resize();
-      }
-    });
-
-    resizeObserver.observe(chartRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [chartReady]);
-
-  const toggleVolume = () => {
-    if (chartInstance.current && volPaneId) {
-      const newVisibility = !volVisible;
-      chartInstance.current.overrideIndicator({
-        name: 'VOL',
-        paneId: volPaneId,
-        visible: newVisibility,
-      });
-      setVolVisible(newVisibility);
-    }
-  };
-
+  // ── Volume controls ──
   const removeVolume = () => {
     if (chartInstance.current && volPaneId) {
       chartInstance.current.removeIndicator(volPaneId);
@@ -591,32 +432,37 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
 
   return (
     <div className="w-full h-full flex flex-col bg-white relative overflow-hidden">
-      {/* Status bar */}
+      {/* Status badge */}
       <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur px-3 py-1.5 rounded shadow-sm text-xs flex items-center gap-3 border border-gray-200">
         {isLocked && (
           <span className="flex items-center gap-1 text-yellow-600">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
             </svg>
             Locked
           </span>
         )}
-        <span className={`flex items-center gap-1.5 ${candles.length > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-          <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+        <span
+          className={`flex items-center gap-1.5 ${candles.length > 0 ? 'text-green-600' : 'text-gray-400'}`}
+        >
+          <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
           Live
         </span>
-        <span className="text-gray-600">
-          {candles.length} candles
-        </span>
+        <span className="text-gray-600">{candles.length} candles</span>
       </div>
 
+      {/* Vol controls */}
       {chartReady && volPaneId && (
         <div className="absolute bottom-1 left-0 right-0 z-30 mr-10 flex items-center justify-end px-2 py-0.5 gap-0.5">
           {volVisible ? (
             <>
               <button
                 onClick={() => setShowVolSettings(!showVolSettings)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="p-1 hover:bg-gray-100 rounded"
                 title="Volume Settings"
               >
                 <svg
@@ -639,10 +485,9 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
                   />
                 </svg>
               </button>
-
               <button
                 onClick={removeVolume}
-                className="p-1 hover:bg-red-50 hover:text-red-600 rounded transition-colors"
+                className="p-1 hover:bg-red-50 hover:text-red-600 rounded"
                 title="Remove Volume"
               >
                 <svg
@@ -667,26 +512,22 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
       )}
 
       {chartReady && !volPaneId && (
-        <div className="absolute bottom-1 left-0 right-0 z-30 mr-10 flex items-center justify-end px-2 py-0.5 gap-0.5">
+        <div className="absolute bottom-1 left-0 right-0 z-30 mr-10 flex items-center justify-end px-2 py-0.5">
           <button
             onClick={() => {
               if (chartInstance.current) {
-                const volPane = chartInstance.current.createIndicator(
-                  'VOL',
-                  false,
-                  {
-                    height: 100,
-                    minHeight: 60,
-                    maxHeight: 2000,
-                    dragEnabled: false,
-                  },
-                );
-                setVolPaneId(volPane);
-                onVolPaneCreated?.(volPane);
+                const vp = chartInstance.current.createIndicator('VOL', false, {
+                  height: 100,
+                  minHeight: 60,
+                  maxHeight: 2000,
+                  dragEnabled: false,
+                });
+                setVolPaneId(vp);
+                onVolPaneCreated?.(vp);
                 setVolVisible(true);
               }
             }}
-            className="p-1 hover:bg-green-50 hover:text-green-600 rounded transition-colors"
+            className="p-1 hover:bg-green-50 hover:text-green-600 rounded"
             title="Add Volume"
           >
             <svg
@@ -721,7 +562,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           </div>
           <button
             onClick={() => setShowVolSettings(false)}
-            className="mt-3 w-full px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors"
+            className="mt-3 w-full px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
           >
             Close
           </button>
@@ -736,15 +577,15 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
               <div
                 className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                 style={{ animationDelay: '0ms' }}
-              ></div>
+              />
               <div
                 className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                 style={{ animationDelay: '150ms' }}
-              ></div>
+              />
               <div
                 className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
                 style={{ animationDelay: '300ms' }}
-              ></div>
+              />
             </div>
           </div>
         </div>
@@ -762,10 +603,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
       <div
         ref={chartRef}
         className="w-full h-full"
-        style={{
-          visibility: chartReady ? 'visible' : 'hidden',
-          minHeight: 0,
-        }}
+        style={{ visibility: chartReady ? 'visible' : 'hidden', minHeight: 0 }}
       />
     </div>
   );

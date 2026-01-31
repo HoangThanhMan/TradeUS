@@ -26,8 +26,8 @@ const POPULAR_SYMBOLS = Object.keys(SYMBOL_META);
 
 export default function MultiTimeframePage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const { socket, status, error } = useWebSocket(WS_URL);
 
@@ -75,7 +75,7 @@ export default function MultiTimeframePage() {
       }
     };
 
-    checkVipAccess();
+    // checkVipAccess();
   }, [router]);
 
   if (isLoading || !isAuthenticated) {

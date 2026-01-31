@@ -4,6 +4,10 @@
 import React, { useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { TimeframeChartInstance } from './TimeframeChartInstance';
+import {
+  DEFAULT_CHART_SETTINGS,
+  ChartSettings,
+} from '../../../src/hooks/useChartSettings';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 
 interface MultiTimeframeContainerProps {
@@ -11,6 +15,11 @@ interface MultiTimeframeContainerProps {
   timeframes: string[];
   socket: Socket | null;
   connected: boolean;
+}
+
+interface ChartState {
+  timeframe: string;
+  settings: ChartSettings;
 }
 
 const pjs = Plus_Jakarta_Sans({
@@ -24,15 +33,37 @@ export function MultiTimeframeContainer({
   socket,
   connected,
 }: MultiTimeframeContainerProps) {
-  // State to manage individual timeframes for each chart
-  const [chartTimeframes, setChartTimeframes] =
-    useState<string[]>(initialTimeframes);
+  // 🔥 NEW: State to manage both timeframes and settings for each chart
+  const [chartStates, setChartStates] = useState<ChartState[]>(
+    initialTimeframes.map((timeframe) => ({
+      timeframe,
+      settings: { ...DEFAULT_CHART_SETTINGS }, // Clone default settings for each chart
+    })),
+  );
 
-  // Handler to update a specific chart's timeframe
+  // 🔥 NEW: Handler to update a specific chart's timeframe
   const handleTimeframeChange = (chartIndex: number, newTimeframe: string) => {
-    setChartTimeframes((prev) => {
+    setChartStates((prev) => {
       const updated = [...prev];
-      updated[chartIndex] = newTimeframe;
+      updated[chartIndex] = {
+        ...updated[chartIndex],
+        timeframe: newTimeframe,
+      };
+      return updated;
+    });
+  };
+
+  // 🔥 NEW: Handler to update a specific chart's settings
+  const handleSettingsChange = (
+    chartIndex: number,
+    newSettings: ChartSettings,
+  ) => {
+    setChartStates((prev) => {
+      const updated = [...prev];
+      updated[chartIndex] = {
+        ...updated[chartIndex],
+        settings: newSettings,
+      };
       return updated;
     });
   };
@@ -42,17 +73,21 @@ export function MultiTimeframeContainer({
     <div
       className={`w-full h-full grid grid-cols-2 grid-rows-2 gap-2 ${pjs.className}`}
     >
-      {chartTimeframes.map((timeframe, index) => (
+      {chartStates.map((chartState, index) => (
         <TimeframeChartInstance
           key={`${symbol}-${index}`}
           symbol={symbol}
-          interval={timeframe}
+          interval={chartState.timeframe}
           socket={socket}
           connected={connected}
           chartNumber={index + 1}
+          settings={chartState.settings} 
           onTimeframeChange={(newTimeframe) =>
             handleTimeframeChange(index, newTimeframe)
           }
+          onSettingsChange={(newSettings) =>
+            handleSettingsChange(index, newSettings)
+          } // 🔥 NEW: Pass settings handler
         />
       ))}
     </div>

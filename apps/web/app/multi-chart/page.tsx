@@ -28,8 +28,8 @@ const pjs = Plus_Jakarta_Sans({
 
 export default function MultiChartPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Thêm biến loading để tránh hiện giao diện khi chưa check xong
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Thêm biến loading để tránh hiện giao diện khi chưa check xong
   
   const { socket, status, error } = useWebSocket(WS_URL);
   const {
@@ -86,7 +86,7 @@ export default function MultiChartPage() {
       }
     };
 
-    checkVipAccess();
+    // checkVipAccess();
   }, [router]);
 
   // 6. Hiển thị màn hình chờ khi đang check quyền

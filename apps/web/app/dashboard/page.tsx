@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx (UPDATED)
+// app/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -6,11 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { useChartData } from '../../src/hooks/useChartData';
 import { useDrawingManager } from '../../src/hooks/useDrawingManager';
+import { useChartSettings } from '../../src/hooks/useChartSettings';
 import { Header } from '../../src/components/page/Header';
 import { Sidebar } from '../../src/components/toolbars/LeftSidebar';
 import { RightSidebar, RightPanelType } from '../../src/components/page/RightSidebar';
 import { SentimentPanel } from '../../src/components/page/SentimentPanel';
 import { PredictionPanel } from '../../src/components/page/PredictionPanel';
+import { ChatbotPanel } from '../../src/components/page/ChatbotPanel'; // 🔥 NEW
 import { ChartToolbar } from '../../src/components/toolbars/ChartToolbar';
 import { InfoBar } from '../../src/components/toolbars/InfoBar';
 import { KLineChart } from '../../src/components/chart-tools/KLineChart';
@@ -32,7 +34,10 @@ export default function DashboardPage() {
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const chartInstanceRef = useRef<any>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
+
+  const { settings, updateSettings } = useChartSettings();
 
   const {
     state: drawingState,
@@ -61,13 +66,8 @@ export default function DashboardPage() {
     }
   }, [router]);
 
-  const { socket, status, error, subscribe, unsubscribe } =
-    useWebSocket(WS_URL);
-  const { candles, latestPrice, loading } = useChartData(
-    socket,
-    symbol,
-    timeframe,
-  );
+  const { socket, status, error, subscribe, unsubscribe } = useWebSocket(WS_URL);
+  const { candles, latestPrice, loading } = useChartData(socket, symbol, timeframe);
 
   useEffect(() => {
     if (socket && status.connected) {
@@ -75,11 +75,6 @@ export default function DashboardPage() {
       return () => unsubscribe([symbol], timeframe);
     }
   }, [socket, status.connected, symbol, timeframe]);
-
-  const handleChartTypeChange = (newType: string) => {
-    console.log('🎨 Changing chart type to:', newType);
-    setChartType(newType);
-  };
 
   if (!isAuthenticated) {
     return (
@@ -107,20 +102,18 @@ export default function DashboardPage() {
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* ChartHeader for symbol selection */}
-          <ChartHeader
-            symbol={symbol}
-            showChartNumber={false}
-            onSymbolChange={setSymbol}
-          />
+          <ChartHeader symbol={symbol} showChartNumber={false} onSymbolChange={setSymbol} />
 
           <ChartToolbar
             symbol={symbol}
             timeframe={timeframe}
             chartType={chartType}
+            chartContainerRef={chartContainerRef}
+            settings={settings}
             onSymbolChange={setSymbol}
             onTimeframeChange={setTimeframe}
-            onChartTypeChange={handleChartTypeChange}
+            onChartTypeChange={setChartType}
+            onSettingsChange={updateSettings}
             onIndicatorClick={() => setShowIndicatorModal(true)}
           />
 
@@ -136,30 +129,28 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 relative">
+            <div ref={chartContainerRef} className="flex-1 relative">
               <KLineChart
                 candles={candles}
                 symbol={symbol}
                 chartType={chartType}
+                settings={settings}
                 ref={chartInstanceRef}
                 onVolPaneCreated={setVolPaneId}
                 isLocked={drawingState.drawingsLocked}
               />
-
               <DrawingLayer
                 chartInstance={chartInstanceRef.current}
                 drawings={drawingState.drawings}
                 tempDrawing={drawingState.tempDrawing}
                 priceLevels={undefined}
               />
-
               <FreeDrawingCanvas
                 activeTool={drawingState.activeTool}
                 drawings={drawingState.freeDrawings}
                 onDrawingComplete={addFreeDrawing}
                 drawingsVisible={drawingState.drawingsVisible}
               />
-
               <SimplePriceLevelLayer
                 activeTool={drawingState.activeTool}
                 levels={drawingState.priceLevels || []}
@@ -167,7 +158,6 @@ export default function DashboardPage() {
                 chartInstance={chartInstanceRef.current}
                 drawingsVisible={drawingState.drawingsVisible}
               />
-
               <FibonacciRetracementLayer
                 activeTool={drawingState.activeTool}
                 highPoint={drawingState.fibonacciHigh || null}
@@ -181,27 +171,27 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Right Side Panel */}
+        {/* 🔥 RIGHT PANELS - Updated with Chatbot */}
         {activeRightPanel === 'sentiment' && (
-          <SentimentPanel 
-            symbol={symbol} 
-            onClose={() => setActiveRightPanel(null)} 
-          />
+          <SentimentPanel symbol={symbol} onClose={() => setActiveRightPanel(null)} />
         )}
         {activeRightPanel === 'prediction' && (
           <PredictionPanel 
-            symbol={symbol}
-            interval="1h"  // Use 1h interval for ML prediction
+            symbol={symbol} 
+            interval="1h" 
             currentPrice={latestPrice} 
             onClose={() => setActiveRightPanel(null)} 
           />
         )}
-
-        {/* Right Sidebar with icons */}
-        <RightSidebar 
-          activePanel={activeRightPanel} 
-          onPanelChange={setActiveRightPanel} 
-        />
+        {activeRightPanel === 'chatbot' && (
+          <ChatbotPanel
+            symbol={symbol}
+            currentPrice={latestPrice?.close}
+            onClose={() => setActiveRightPanel(null)}
+          />
+        )}
+        
+        <RightSidebar activePanel={activeRightPanel} onPanelChange={setActiveRightPanel} />
       </div>
 
       <IndicatorManager

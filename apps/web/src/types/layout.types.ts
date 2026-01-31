@@ -1,3 +1,6 @@
+// src/types/layout.types.ts
+import { ChartSettings } from '../hooks/useChartSettings';
+
 export type LayoutType = 
   | '1x1'           // 1 chart
   | '1x2'           // 2 charts horizontal (side by side)
@@ -6,16 +9,19 @@ export type LayoutType =
   | '1top-2bottom'  // 3 charts: 1 on top, 2 on bottom
   | '2x2';          // 4 charts grid
 
+export interface ChartPosition {
+  row: number;
+  col: number;
+  rowSpan: number;
+  colSpan: number;
+}
+
 export interface ChartConfig {
   id: string;
   symbol: string;
   interval: string;
-  position: {
-    row: number;
-    col: number;
-    rowSpan: number;
-    colSpan: number;
-  };
+  position: ChartPosition;
+  settings?: ChartSettings; // 🔥 Per-chart settings (FIXED: moved from LayoutConfig)
 }
 
 export interface LayoutConfig {
@@ -24,6 +30,14 @@ export interface LayoutConfig {
   rows: number;
   cols: number;
 }
+
+// Default symbols for different chart positions
+export const DEFAULT_SYMBOLS = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'BNBUSDT',
+  'SOLUSDT',
+];
 
 export const LAYOUT_PRESETS: Record<LayoutType, Omit<LayoutConfig, 'charts'>> = {
   '1x1': { type: '1x1', rows: 1, cols: 1 },

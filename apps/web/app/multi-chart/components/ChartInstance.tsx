@@ -1,10 +1,15 @@
-// src/components/chart/ChartInstance.tsx (WITH SYMBOL SELECTOR)
+// src/components/chart/ChartInstance.tsx
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { useChartData } from '../../../src/hooks/useChartData';
 import { useDrawingManager } from '../../../src/hooks/useDrawingManager';
+import {
+  applySettings,
+  DEFAULT_CHART_SETTINGS,
+  ChartSettings,
+} from '../../../src/hooks/useChartSettings';
 import { KLineChart } from '../../../src/components/chart-tools/KLineChart';
 import { ChartToolbar } from '../../../src/components/toolbars/ChartToolbar';
 import { InfoBar } from '../../../src/components/toolbars/InfoBar';
@@ -24,7 +29,7 @@ interface ChartInstanceProps {
   connected: boolean;
   onUpdateChart: (
     chartId: string,
-    updates: Partial<Pick<ChartConfig, 'symbol' | 'interval'>>,
+    updates: Partial<Pick<ChartConfig, 'symbol' | 'interval' | 'settings'>>,
   ) => void;
   chartNumber?: number;
 }
@@ -48,8 +53,14 @@ export function ChartInstance({
   );
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const chartInstanceRef = useRef<any>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
   const [chartType, setChartType] = useState('candle_solid');
+
+  // Local settings state initialized from config or defaults
+  const [localSettings, setLocalSettings] = useState<ChartSettings>(
+    config.settings || DEFAULT_CHART_SETTINGS,
+  );
 
   const {
     state: drawingState,
@@ -68,6 +79,19 @@ export function ChartInstance({
     setFibonacciLow,
     clearFibonacci,
   } = useDrawingManager(chartInstanceRef.current);
+
+  // Apply settings to chart instance whenever they change
+  useEffect(() => {
+    if (chartInstanceRef.current && localSettings) {
+      applySettings(chartInstanceRef.current, localSettings);
+    }
+  }, [localSettings]);
+
+  // Sync settings changes back to parent
+  const handleSettingsChange = (newSettings: ChartSettings) => {
+    setLocalSettings(newSettings);
+    onUpdateChart(config.id, { settings: newSettings });
+  };
 
   useEffect(() => {
     if (socket && connected) {
@@ -106,9 +130,10 @@ export function ChartInstance({
 
   return (
     <div
+      ref={chartContainerRef}
       className={`w-full h-full flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden relative ${pjs.className}`}
     >
-      {/* 🔥 UPDATED: Pass onSymbolChange handler */}
+      {/* Chart Header with Symbol Selector */}
       <ChartHeader
         symbol={config.symbol}
         chartNumber={chartNumber}
@@ -130,13 +155,17 @@ export function ChartInstance({
         />
 
         <div className="flex-1 flex flex-col min-w-0">
+          {/* 🔥 INTEGRATED: Full ChartToolbar with all features */}
           <ChartToolbar
             symbol={config.symbol}
             timeframe={config.interval}
             chartType={chartType}
+            chartContainerRef={chartContainerRef}
+            settings={localSettings}
             onSymbolChange={handleSymbolChange}
             onTimeframeChange={handleTimeframeChange}
             onChartTypeChange={setChartType}
+            onSettingsChange={handleSettingsChange}
             onIndicatorClick={handleIndicatorClick}
           />
 

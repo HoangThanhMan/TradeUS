@@ -490,23 +490,23 @@ class ModelManager:
             if price_change_pct > 1.5:
                 signal = "STRONG_BUY"
                 signal_color = "#00c853"  # Green
-                message = "🚀 Giá dự kiến tăng mạnh"
+                message = "🚀 Price is expected to rise strongly"
             elif price_change_pct > 0.5:
                 signal = "BUY"
                 signal_color = "#69f0ae"  # Light green
-                message = "📈 Giá có xu hướng tăng"
+                message = "📈 Price shows an upward trend"
             elif price_change_pct < -1.5:
                 signal = "STRONG_SELL"
                 signal_color = "#ff1744"  # Red
-                message = "⚠️ Giá dự kiến giảm mạnh"
+                message = "⚠️ Price is expected to drop sharply"
             elif price_change_pct < -0.5:
                 signal = "SELL"
                 signal_color = "#ff8a80"  # Light red
-                message = "📉 Giá có xu hướng giảm"
+                message = "📉 Price shows a downward trend"
             else:
                 signal = "HOLD"
                 signal_color = "#9e9e9e"  # Gray
-                message = "➡️ Giá dự kiến ổn định"
+                message = "➡️ Price is expected to remain stable"
 
             result = {
                 "symbol": symbol,

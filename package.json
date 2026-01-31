@@ -16,6 +16,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {
+    "@types/html2canvas": "^1.0.0",
     "@types/node": "^20.10.6",
     "prettier": "^3.6.2",
     "turbo": "^2.0.0",
@@ -26,6 +27,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "html2canvas": "^1.4.1",
     "three": "^0.182.0"
   }
 }

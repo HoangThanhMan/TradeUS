@@ -8,8 +8,28 @@ import {
   SentimentResultData,
   SentimentAlertData,
 } from '../../hooks/useSentimentWebSocket';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import {
+  IconAlertTriangle,
+  IconBell,
+  IconChartBar,
+  IconChevronDown,
+  IconChevronUp,
+  IconMinus,
+  IconNews,
+  IconPackage,
+  IconRobot,
+  IconTrendingDown,
+  IconTrendingUp,
+} from '@tabler/icons-react';
 
-const SENTIMENT_WS_URL = process.env.NEXT_PUBLIC_SENTIMENT_WS_URL || 'http://localhost:3002/sentiment';
+const pjs = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+});
+
+const SENTIMENT_WS_URL =
+  process.env.NEXT_PUBLIC_SENTIMENT_WS_URL || 'http://localhost:3002/sentiment';
 
 interface SentimentNews {
   id: string;
@@ -64,7 +84,8 @@ const mapToSentimentNews = (data: SentimentResultData): SentimentNews => {
     source = 'News';
   }
 
-  const publishedAt = data.published || data.created_at || new Date().toISOString();
+  const publishedAt =
+    data.published || data.created_at || new Date().toISOString();
 
   return {
     id: data.id || `${Date.now()}-${Math.random()}`,
@@ -79,6 +100,25 @@ const mapToSentimentNews = (data: SentimentResultData): SentimentNews => {
     symbol: data.symbol,
     isNew: isWithin24Hours(publishedAt),
   };
+};
+
+const getEmotionBadgeClass = (emotion: string) => {
+  switch (emotion) {
+    case 'Optimism':
+      return 'bg-green-100 text-green-700';
+    case 'Greed':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'Excitement':
+      return 'bg-blue-100 text-blue-700';
+    case 'Fear':
+      return 'bg-orange-100 text-orange-700';
+    case 'Anger':
+      return 'bg-red-100 text-red-700';
+    case 'Pessimism':
+      return 'bg-gray-200 text-gray-700';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
 };
 
 export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
@@ -113,17 +153,17 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
   // Update news when sentimentResults changes
   useEffect(() => {
     const filteredResults = sentimentResults.filter(
-      (r) => r.symbol?.toUpperCase() === symbol.toUpperCase()
+      (r) => r.symbol?.toUpperCase() === symbol.toUpperCase(),
     );
     const mappedNews = filteredResults.map(mapToSentimentNews);
-    
+
     // Sort by published date (newest first)
     mappedNews.sort((a, b) => {
       const dateA = new Date(a.publishedAt);
       const dateB = new Date(b.publishedAt);
       return dateB.getTime() - dateA.getTime();
     });
-    
+
     setNews(mappedNews);
   }, [sentimentResults, symbol]);
 
@@ -131,9 +171,9 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
     const now = new Date();
     const date = new Date(dateString);
     const diffMs = now.getTime() - date.getTime();
-    
+
     if (diffMs < 0) return 'just now';
-    
+
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -168,11 +208,11 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
   const getSentimentIcon = (sentiment: string) => {
     switch (sentiment) {
       case 'Optimism':
-        return '📈';
+        return <IconTrendingUp size={14} stroke={1.8} />;
       case 'Pessimism':
-        return '📉';
+        return <IconTrendingDown size={14} stroke={1.8} />;
       default:
-        return '➡️';
+        return <IconMinus size={14} stroke={1.8} />;
     }
   };
 
@@ -190,21 +230,25 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
   };
 
   const filteredAlerts = alerts.filter(
-    (a) => a.symbol?.toUpperCase() === symbol.toUpperCase()
+    (a) => a.symbol?.toUpperCase() === symbol.toUpperCase(),
   );
 
   // Count new news (within 24h)
-  const newNewsCount = news.filter(n => n.isNew).length;
+  const newNewsCount = news.filter((n) => n.isNew).length;
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
+    <div
+      className={`w-80 bg-white border-l border-gray-200 flex flex-col h-full ${pjs.className}`}
+    >
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-lg">📰</span>
-          <h3 className="font-semibold text-gray-900">Sentiment News</h3>
+          <IconNews className="text-black" size={18} stroke={1.8} />
+          <h3 className="font-semibold text-[14px] text-gray-900">
+            Sentiment News
+          </h3>
           {newNewsCount > 0 && (
-            <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium min-w-[20px] text-center">
+            <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] rounded-full font-medium min-w-[20px] text-center">
               {newNewsCount}
             </span>
           )}
@@ -261,45 +305,50 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
       <div className="flex border-b border-gray-200 flex-shrink-0">
         <button
           onClick={() => setShowAlerts(false)}
-          className={`flex-1 py-2 text-sm font-medium ${
+          className={`flex-1 py-2 text-[12px] font-medium flex items-center justify-center gap-1.5 ${
             !showAlerts
               ? 'text-green-600 border-b-2 border-green-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          📊 Results ({news.length})
+          <IconChartBar size={16} stroke={1.8} />
+          Results ({news.length})
         </button>
+
         <button
           onClick={() => setShowAlerts(true)}
-          className={`flex-1 py-2 text-sm font-medium ${
+          className={`flex-1 py-2 text-[12px] font-medium flex items-center justify-center gap-1.5 ${
             showAlerts
               ? 'text-red-600 border-b-2 border-red-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          ⚠️ Alerts ({filteredAlerts.length})
+          <IconAlertTriangle size={16} stroke={1.8} />
+          Alerts ({filteredAlerts.length})
         </button>
       </div>
 
       {/* Batch Info */}
-      {batchInfo && (
+      {/* {batchInfo && (
         <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700 flex-shrink-0">
-          <div className="flex items-center gap-1">
-            <span>📦</span>
+          <div className="flex items-center gap-1.5">
+            <IconPackage size={14} stroke={1.8} />
             <span>
               Last batch: {batchInfo.total_analyzed} analyzed | Avg:{' '}
               {batchInfo.average_sentiment?.toFixed(2)}
             </span>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {!status.connected ? (
           <div className="flex flex-col items-center justify-center h-32 text-yellow-600 p-4">
             <span className="text-2xl mb-2">🔌</span>
-            <span className="text-sm text-center">Connecting to sentiment stream...</span>
+            <span className="text-sm text-center">
+              Connecting to sentiment stream...
+            </span>
             {error && (
               <span className="text-xs text-red-500 mt-1">{error}</span>
             )}
@@ -307,9 +356,9 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
         ) : showAlerts ? (
           // Alerts Tab
           filteredAlerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-              <span className="text-2xl mb-2">🔔</span>
-              <span>No alerts for {symbol}</span>
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <IconBell size={24} className="mb-2 text-yellow-500" />
+              <span className="text-[12px]">No alerts for {symbol}</span>
             </div>
           ) : (
             <div className="p-3 space-y-3">
@@ -321,12 +370,14 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`px-2 py-0.5 rounded text-xs font-medium ${getAlertTypeColor(
-                        alert.alert_type
+                        alert.alert_type,
                       )}`}
                     >
                       {alert.alert_type.replace('_', ' ').toUpperCase()}
                     </span>
-                    <span className="text-xs text-gray-500">{alert.symbol}</span>
+                    <span className="text-xs text-gray-500">
+                      {alert.symbol}
+                    </span>
                   </div>
                   <p className="text-sm text-gray-700">{alert.message}</p>
                   <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
@@ -347,14 +398,14 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
             </span>
           </div>
         ) : (
-          <div className="p-3 space-y-3">
+          <div className="pr-1 p-3 space-y-3">
             {news.map((item) => (
               <div
                 key={item.id}
                 className={`rounded-lg p-3 border transition-colors ${
-                  item.isNew 
-                    ? 'bg-green-50 border-green-200 ring-1 ring-green-100' 
-                    : 'bg-gray-50 border-gray-100 hover:border-gray-200'
+                  item.isNew
+                    ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-100'
+                    : 'bg-gray-50 border-gray-300 hover:border-gray-100'
                 }`}
               >
                 {/* Header with badges */}
@@ -368,7 +419,7 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                         </span>
                       )}
                       {/* Source badge */}
-                      <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded">
+                      <span className="px-1.5 py-0.5 font-bold bg-gray-200 text-gray-600 text-[10px] rounded">
                         {item.source}
                       </span>
                     </div>
@@ -399,11 +450,28 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                 </div>
 
                 {/* AI Analysis Box */}
-                <div className="bg-green-50 border border-green-100 rounded-md p-2 mb-2">
-                  <div className="flex items-center gap-1 text-green-600 text-xs font-medium mb-1">
-                    <span>🤖</span>
+                <div
+                  className={`rounded-md p-2 mb-2 border ${
+                    item.isNew
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <div
+                    className={`flex items-center gap-1 text-xs font-medium mb-1 ${
+                      item.isNew ? 'text-emerald-600' : 'text-gray-500'
+                    }`}
+                  >
+                    <IconRobot
+                      size={20}
+                      stroke={1.8}
+                      className={
+                        item.isNew ? 'text-emerald-600' : 'text-gray-400'
+                      }
+                    />
                     <span>AI Market Analysis</span>
                   </div>
+
                   <p
                     className={`text-xs text-gray-600 ${
                       expandedId === item.id ? '' : 'line-clamp-3'
@@ -416,9 +484,19 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                       onClick={() =>
                         setExpandedId(expandedId === item.id ? null : item.id)
                       }
-                      className="text-xs text-green-600 hover:text-green-700 mt-1"
+                      className="mt-1 flex items-center gap-1 text-xs text-black hover:text-gray-700"
                     >
-                      {expandedId === item.id ? '▲ Read less' : '▼ Read more'}
+                      {expandedId === item.id ? (
+                        <>
+                          <IconChevronUp size={14} stroke={1.8} />
+                          Read less
+                        </>
+                      ) : (
+                        <>
+                          <IconChevronDown size={14} stroke={1.8} />
+                          Read more
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -426,15 +504,19 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                 {/* Sentiment & Meta */}
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Sentiment:</span>
+                    <span className="text-gray-600 font-semibold">
+                      Sentiment:
+                    </span>
                     <span
                       className={`font-medium flex items-center gap-1 ${getSentimentColor(
-                        item.sentiment
+                        item.sentiment,
                       )}`}
                     >
                       {getSentimentIcon(item.sentiment)} {item.sentiment}
                     </span>
-                    <span className="text-gray-400">
+                    <span
+                      className={`text-xs ${getSentimentColor(item.sentiment)}`}
+                    >
                       ({item.sentimentScore > 0 ? '+' : ''}
                       {item.sentimentScore.toFixed(2)})
                     </span>
@@ -442,16 +524,22 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                 </div>
 
                 {/* Emotion Badge */}
-                <div className="flex items-center justify-between mt-2 text-xs">
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <span>Emotion:</span>
-                    <span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded">
+                <div className="flex items-center justify-between mt-1 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-600 font-semibold">
+                      Emotion:
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded font-medium ${getEmotionBadgeClass(
+                        item.emotion,
+                      )}`}
+                    >
                       {item.emotion}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                <div className="flex items-center justify-between mt-1 text-xs text-gray-400">
                   <div className="flex items-center gap-1">
                     <svg
                       className="w-3 h-3"
@@ -468,7 +556,7 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
                     </svg>
                     <span>{formatTimeAgo(item.publishedAt)}</span>
                   </div>
-                  <span className="px-2 py-0.5 bg-gray-200 rounded text-gray-600">
+                  <span className="px-2 py-0.5 bg-gray-200 rounded text-black font-semibold">
                     {item.symbol}
                   </span>
                 </div>
@@ -491,7 +579,9 @@ export function SentimentPanel({ symbol, onClose }: SentimentPanelProps) {
               <span className="text-red-600">● Disconnected</span>
             )}
           </span>
-          <span>{symbol} | {news.length} news</span>
+          <span>
+            {symbol} | {news.length} news
+          </span>
         </div>
       </div>
     </div>

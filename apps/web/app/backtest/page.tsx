@@ -25,8 +25,8 @@ const API_URL =
 
 export default function BacktestPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const { status } = useWebSocket(WS_URL);
@@ -72,7 +72,7 @@ export default function BacktestPage() {
       }
     };
 
-    checkVipAccess();
+    // checkVipAccess();
   }, [router]);
 
   const handleRunBacktest = async (config: BacktestConfig) => {

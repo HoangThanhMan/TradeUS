@@ -54,7 +54,6 @@ export function BacktestResults({ result, isLoading }: Props) {
     return (
       <div className="flex items-center justify-center min-h-[600px] bg-white rounded-lg">
         <div className="text-center">
-          <div className="text-6xl mb-4">📊</div>
           <h3 className="text-xl text-gray-700 font-semibold mb-2">
             No Results Yet
           </h3>
