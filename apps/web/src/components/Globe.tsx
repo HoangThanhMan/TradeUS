@@ -48,12 +48,12 @@ export default function Globe() {
     const sphereGeom = new THREE.SphereGeometry(88, 128, 128);
 
     // fallback 1x1 blue texture so the globe shows oceans white before the full map loads
-    const defaultData = new Uint8Array([20, 70, 200]); // ocean-blue RGB
+    const defaultData = new Uint8Array([20, 70, 200, 255]); // ocean-blue RGBA
     const defaultTexture = new THREE.DataTexture(
       defaultData,
       1,
       1,
-      THREE.RGBFormat,
+      THREE.RGBAFormat,
     );
     defaultTexture.needsUpdate = true;
 
@@ -149,6 +149,7 @@ export default function Globe() {
     let frameId = 0;
 
     function onWindowResize() {
+      if (!mount) return;
       const w = mount.clientWidth || 200;
       const h = mount.clientHeight || 200;
       renderer.setSize(w, h);

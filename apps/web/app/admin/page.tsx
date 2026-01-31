@@ -300,7 +300,7 @@ export default function AdminPage() {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${pjs.className}`}>
-      <Header status="connected" />
+      <Header status={{ connected: true, clientId: null, instanceId: null }} />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}

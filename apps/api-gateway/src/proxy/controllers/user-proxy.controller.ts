@@ -15,7 +15,7 @@ import type { IJwtPayload } from '@tradex/shared-types';
 import type { Request } from 'express'; // <--- 2. Thêm type Request (nếu dùng express)
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class UserProxyController {
   constructor(private readonly proxyService: ProxyService) {}
 

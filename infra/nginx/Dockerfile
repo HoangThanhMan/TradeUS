@@ -1,10 +1,10 @@
 FROM nginx:alpine
 
-# Remove default config
-RUN rm /etc/nginx/conf.d/default.conf
+# Remove default nginx.conf and conf.d
+RUN rm /etc/nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy custom config
-COPY nginx.conf /etc/nginx/conf.d/
+# Copy custom config as main nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port
 EXPOSE 80

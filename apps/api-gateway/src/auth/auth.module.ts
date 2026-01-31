@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 
 import { LocalStrategy } from './strategies/local.strategy';
 
-import { JwtStrategy, JwtAuthGuard, LocalAuthGuard } from '@tradex/auth-shared';
+import { JwtStrategy, LocalAuthGuard } from '@tradex/auth-shared';
 
 @Module({
   imports: [
@@ -39,9 +39,8 @@ import { JwtStrategy, JwtAuthGuard, LocalAuthGuard } from '@tradex/auth-shared';
       inject: [ConfigService],
     },
     LocalStrategy,
-    JwtAuthGuard,
     LocalAuthGuard,
   ],
-  exports: [AuthService, JwtAuthGuard],
+  exports: [AuthService],
 })
 export class AuthModule {}

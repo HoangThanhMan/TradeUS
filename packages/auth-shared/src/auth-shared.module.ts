@@ -1,4 +1,5 @@
 import { Module, DynamicModule, Global } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtService as CustomJwtService } from './services/jwt.service';
@@ -51,6 +52,7 @@ export class AuthSharedModule {
             return new JwtStrategy({ jwtSecret: options.jwtSecret });
           },
         },
+        Reflector,
         JwtAuthGuard,
         RolesGuard,
       ],
@@ -60,6 +62,7 @@ export class AuthSharedModule {
         JwtStrategy,
         JwtAuthGuard,
         RolesGuard,
+        Reflector,
         JwtModule,
         PassportModule,
       ],
