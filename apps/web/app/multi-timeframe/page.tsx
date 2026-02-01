@@ -12,9 +12,8 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { SYMBOL_META } from '../../src/constants/symbols';
 import { VipStatus } from '@tradex/shared-types';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3002/prices';
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],

@@ -23,7 +23,7 @@ import { SimplePriceLevelLayer } from '../../src/components/chart-tools/SimplePr
 import { FibonacciRetracementLayer } from '../../src/components/chart-tools/FibonacciRetracementLayer';
 import { ChartHeader } from '../../src/components/toolbars/ChartHeader';
 
-const WS_URL = 'http://localhost:3002/prices';
+const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
 
 export default function DashboardPage() {
   const router = useRouter();

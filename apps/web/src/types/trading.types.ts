@@ -13,6 +13,7 @@ export interface PriceMessage {
   streamType: string;
   interval?: string;   
   isClosed?: boolean
+  openTime?: number;
 }
 
 export interface CandlestickData {

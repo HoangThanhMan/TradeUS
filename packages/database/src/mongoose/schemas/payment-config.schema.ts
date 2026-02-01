@@ -55,13 +55,13 @@ export class QRConfig implements IQRConfig {
   updatedAt?: Date;
 }
 
-export const qrConfigSchema = SchemaFactory.createForClass(QRConfig);
+export const paymentConfigSchema = SchemaFactory.createForClass(QRConfig);
 
-qrConfigSchema.virtual('id').get(function (this: QRConfigDocument) {
+paymentConfigSchema.virtual('id').get(function (this: QRConfigDocument) {
   return this._id.toHexString();
 });
 
-qrConfigSchema.set('toJSON', {
+paymentConfigSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: function (_doc, ret: any) {

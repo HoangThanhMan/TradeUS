@@ -1,14 +1,32 @@
 import axios from 'axios';
+import { authService } from './auth.service';
 
-const API_URL = 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
   return {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   };
+};
+
+const handleApiCall = async (apiCall: () => Promise<any>) => {
+  try {
+    return await apiCall();
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      try {
+        await authService.refreshToken();
+        return await apiCall();
+      } catch (refreshError) {
+        authService.logout();
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+    throw error;
+  }
 };
 
 export interface PredictionResponse {
@@ -60,7 +78,7 @@ export const predictionService = {
    * Get price prediction for a symbol and interval
    */
   getPrediction: async (symbol: string, interval: string = '1h'): Promise<PredictionResponse> => {
-    try {
+    return handleApiCall(async () => {
       const response = await axios.get(
         `${API_URL}/predictions/predict`,
         {
@@ -69,10 +87,7 @@ export const predictionService = {
         }
       );
       return response.data;
-    } catch (error: any) {
-      console.error('Prediction API error:', error);
-      throw error.response?.data || error;
-    }
+    });
   },
 
   /**
@@ -95,16 +110,13 @@ export const predictionService = {
    * Get model information
    */
   getModelInfo: async (): Promise<ModelInfo> => {
-    try {
+    return handleApiCall(async () => {
       const response = await axios.get(
         `${API_URL}/predictions/model-info`,
         getAuthHeaders()
       );
       return response.data;
-    } catch (error: any) {
-      console.error('Model info API error:', error);
-      throw error.response?.data || error;
-    }
+    });
   },
 
   /**

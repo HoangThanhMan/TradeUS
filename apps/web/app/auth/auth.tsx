@@ -77,7 +77,6 @@ export default function AuthPage() {
 
         // Redirect to dashboard
         router.push('/dashboard');
-        
       } else {
         // --- Xử lý Đăng Ký ---
         if (password !== confirm) {

@@ -2,34 +2,50 @@
 
 import config from './config';
 import logger from './logger';
-import { BinanceKlineClient } from './binance/binance-kline-client';
+import {
+  BinanceKlineClient,
+  KlineMessage,
+} from './binance/binance-kline-client';
 import { PricePublisher } from './rabbitmq';
+import { Binance1sClient } from './binance/binance-1s-client';
 
 class CollectorPriceService {
-  private binanceClient: BinanceKlineClient;
+  private binanceKlineClient: BinanceKlineClient;
+  private binance1sClient: Binance1sClient;
   private pricePublisher: PricePublisher;
   private isShuttingDown = false;
   private messageCount = 0;
 
   // All intervals we want to support
-  private readonly intervals = ['1s', '1m', '5m', '15m', '30m', '1h', '2h', '4h', '1d', '1w'];
+  private readonly klineIntervals = [
+    '1m',
+    '5m',
+    '15m',
+    '30m',
+    '1h',
+    '2h',
+    '4h',
+    '1d',
+    '1w',
+  ];
 
   constructor() {
-    this.binanceClient = new BinanceKlineClient(
+    this.binanceKlineClient = new BinanceKlineClient(
       config.binance.symbols,
-      this.intervals
+      this.klineIntervals,
     );
+    this.binance1sClient = new Binance1sClient(config.binance.symbols);
     this.pricePublisher = new PricePublisher();
   }
 
   async start(): Promise<void> {
     logger.info(
-      { 
+      {
         config: { ...config, rabbitmq: { ...config.rabbitmq, url: '***' } },
-        intervals: this.intervals,
-        symbols: config.binance.symbols
-      }, 
-      'Starting Collector Price Service with kline streams...'
+        intervals: this.klineIntervals,
+        symbols: config.binance.symbols,
+      },
+      'Starting Collector Price Service with kline streams...',
     );
 
     this.setupShutdownHandlers();
@@ -39,14 +55,14 @@ class CollectorPriceService {
       await this.pricePublisher.connect();
 
       // Setup kline message handler
-      this.binanceClient.onMessage(async (klineMessage: { symbol: any; timestamp: any; open: any; high: any; low: any; close: any; volume: any; quoteVolume: any; interval: any; isClosed: any; }) => {
+      this.binanceKlineClient.onMessage(async (klineMessage: KlineMessage) => {
         this.messageCount++;
 
         // Log every 100 messages
         if (this.messageCount % 100 === 0) {
           logger.info(
             { messageCount: this.messageCount },
-            'Kline messages processed'
+            'Kline messages processed',
           );
         }
 
@@ -64,39 +80,68 @@ class CollectorPriceService {
           source: 'binance',
           streamType: 'kline',
           isClosed: klineMessage.isClosed,
+          openTime: klineMessage.openTime,
         };
 
         // Publish to RabbitMQ
         const published = await this.pricePublisher.publish(priceMessage);
-        
+
         if (!published) {
           logger.warn(
             { symbol: klineMessage.symbol, interval: klineMessage.interval },
-            'Failed to publish kline message'
+            'Failed to publish kline message',
           );
         }
 
         // Log completed candles
         if (klineMessage.isClosed) {
           logger.debug(
-            { 
-              symbol: klineMessage.symbol, 
+            {
+              symbol: klineMessage.symbol,
               interval: klineMessage.interval,
-              close: klineMessage.close
+              close: klineMessage.close,
             },
-            'Candle closed'
+            'Candle closed',
+          );
+        }
+      });
+
+      this.binance1sClient.onMessage(async (candle) => {
+        this.messageCount++;
+
+        const priceMessage = {
+          symbol: candle.symbol,
+          timestamp: candle.closeTime,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+          volume: candle.volume,
+          quoteVolume: candle.quoteVolume,
+          interval: '1s',
+          source: 'binance',
+          streamType: 'aggTrade',
+          isClosed: false,
+          openTime: candle.openTime,
+        };
+
+        const published = await this.pricePublisher.publish(priceMessage);
+        if (!published) {
+          logger.warn(
+            { symbol: candle.symbol },
+            'Failed to publish 1s message',
           );
         }
       });
 
       // Connect to Binance WebSocket
-      await this.binanceClient.connect();
+      await this.binanceKlineClient.connect();
+      await this.binance1sClient.connect();
 
       logger.info('✅ Collector Price Service started with kline streams');
 
       // Log status periodically
       this.startStatusLogger();
-
     } catch (error) {
       logger.error({ error }, 'Failed to start Collector Price Service');
       await this.shutdown();
@@ -106,13 +151,16 @@ class CollectorPriceService {
 
   private startStatusLogger(): void {
     setInterval(() => {
-      logger.info({
-        binanceConnected: this.binanceClient.isConnected(),
-        rabbitMQConnected: this.pricePublisher.isConnected(),
-        totalMessages: this.messageCount,
-        intervals: this.intervals,
-      }, 'Service status');
-    }, 60000); // Log every minute
+      logger.info(
+        {
+          klineConnected: this.binanceKlineClient.isConnected(),
+          binance1sConnected: this.binance1sClient.isConnected(),
+          rabbitMQConnected: this.pricePublisher.isConnected(),
+          totalMessages: this.messageCount,
+        },
+        'Service status',
+      );
+    }, 60000);
   }
 
   private setupShutdownHandlers(): void {
@@ -141,16 +189,15 @@ class CollectorPriceService {
 
   private async shutdown(): Promise<void> {
     logger.info('Shutting down Collector Price Service...');
-
     try {
       await Promise.all([
-        this.binanceClient.close(),
+        this.binanceKlineClient.close(),
+        this.binance1sClient.close(),
         this.pricePublisher.close(),
       ]);
-      
       logger.info(
         { totalMessagesProcessed: this.messageCount },
-        'Collector Price Service shut down gracefully'
+        'Collector Price Service shut down gracefully',
       );
     } catch (error) {
       logger.error({ error }, 'Error during shutdown');

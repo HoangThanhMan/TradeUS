@@ -1,23 +1,31 @@
-# Trade-X Development Docker Compose
-# Run with: docker-compose -f docker-compose.dev.yml up -d
+version: '3.8'
+
+# =============================================================================
+# 1. Shared Configuration (YAML Anchors) - Giúp file gọn gàng hơn
+# =============================================================================
+x-common-env: &common-env
+  NODE_ENV: development
+  LOG_LEVEL: info
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+  REDIS_URL: redis://redis:6379
+  # Biến này dùng chung cho các Node.js service
+  MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
 
 services:
   # =============================================================================
   # Infrastructure Services
   # =============================================================================
 
-  # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: tradex-rabbitmq
     hostname: rabbitmq
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-      RABBITMQ_DEFAULT_VHOST: /
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -25,15 +33,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 10s
     networks:
       - tradex-network
 
-  # MongoDB Database
   mongodb:
     image: mongo:7.0
     container_name: tradex-mongodb
     ports:
-      - "27017:27017"
+      - "27017:27017" # Giữ lại để bạn debug bằng Compass/Studio3T
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
@@ -42,25 +50,25 @@ services:
       - mongodb_data:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - tradex-network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: tradex-redis
     ports:
-      - "6379:6379"
+      - "6379:6379" # Giữ lại để debug
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 5
     networks:
       - tradex-network
@@ -69,7 +77,6 @@ services:
   # Data Collection Services
   # =============================================================================
 
-  # Price Collector - Binance WebSocket to RabbitMQ
   collector-price:
     build:
       context: .
@@ -77,28 +84,23 @@ services:
     container_name: tradex-collector-price
     restart: unless-stopped
     environment:
-      NODE_ENV: development
-      LOG_LEVEL: info
+      <<: *common-env # Kế thừa biến chung
       BINANCE_WS_URL: wss://fstream.binance.com/stream
       BINANCE_SYMBOLS: btcusdt,ethusdt,bnbusdt,solusdt,xrpusdt
       BINANCE_STREAM_TYPE: miniTicker
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       RABBITMQ_EXCHANGE: tradex.prices
       RABBITMQ_EXCHANGE_TYPE: topic
       RABBITMQ_ROUTING_KEY_PREFIX: price
-      RECONNECT_INTERVAL_MS: 5000
-      MAX_RECONNECT_ATTEMPTS: 10
     depends_on:
       rabbitmq:
-        condition: service_healthy
+        condition: service_healthy # Chỉ chạy khi RabbitMQ đã xanh
     networks:
       - tradex-network
 
   # =============================================================================
-  # AI/ML Services
+  # AI/ML Services (Python)
   # =============================================================================
 
-  # Sentiment Analysis Service
   sentiment-service:
     build:
       context: ./services/sentiment-service
@@ -109,14 +111,10 @@ services:
       - "8001:8001"
     environment:
       ENVIRONMENT: development
-      HOST: 0.0.0.0
       PORT: 8001
-      LOG_LEVEL: INFO
-      CORS_ORIGINS: "*"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       REDIS_URL: redis://redis:6379
-      MONGODB_URL: mongodb://admin:password@mongodb:27017
-      MONGODB_DATABASE: tradex_sentiment
+      MONGODB_URL: mongodb://admin:password@mongodb:27017/tradex_sentiment?authSource=admin
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -127,12 +125,10 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
       interval: 30s
-      timeout: 10s
       retries: 3
     networks:
       - tradex-network
 
-  # Prediction Service - LSTM Price Prediction
   prediction-service:
     build:
       context: ./services/prediction-service
@@ -143,22 +139,16 @@ services:
       - "8002:8002"
     environment:
       ENVIRONMENT: development
-      HOST: 0.0.0.0
       PORT: 8002
-      LOG_LEVEL: INFO
-      CORS_ORIGINS: "*"
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       REDIS_URL: redis://redis:6379
-      MONGODB_URL: mongodb://admin:password@mongodb:27017
-      MONGODB_DATABASE: tradex_predictions
+      MONGODB_URL: mongodb://admin:password@mongodb:27017/tradex_predictions?authSource=admin
       SENTIMENT_SERVICE_URL: http://sentiment-service:8001
       MODEL_PATH: models/crypto_predictor_btcusdt.pt
     volumes:
       - ./services/prediction-service/models:/app/models:ro
     depends_on:
       rabbitmq:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       mongodb:
         condition: service_healthy
@@ -167,7 +157,6 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8002/health').raise_for_status()"]
       interval: 30s
-      timeout: 10s
       retries: 3
     networks:
       - tradex-network
@@ -176,52 +165,52 @@ services:
   # Backend Services
   # =============================================================================
 
-  # API Gateway
   api-gateway:
     build:
       context: .
       dockerfile: ./apps/api-gateway/Dockerfile
     container_name: tradex-api-gateway
     ports:
-      - "4000:3000"
+      - "3001:3001" # Cổng chính cho Client (Frontend)
     environment:
-      NODE_ENV: development
-      PORT: 3000
-      MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
-      REDIS_URL: redis://redis:6379
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-      USER_SERVICE_URL: http://user-service:3000
+      <<: *common-env
+      PORT: 3001
+      USER_SERVICE_URL: http://user-service:3010
       SENTIMENT_SERVICE_URL: http://sentiment-service:8001
       PREDICTION_SERVICE_URL: http://prediction-service:8002
     depends_on:
-      - mongodb
-      - redis
-      - rabbitmq
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      # API Gateway nên đợi User Service sẵn sàng (nếu User Service có healthcheck)
+      user-service:
+        condition: service_started 
     networks:
       - tradex-network
 
-  # User Service
   user-service:
     build:
       context: .
       dockerfile: ./services/user-service/Dockerfile
     container_name: tradex-user-service
     ports:
-      - "3010:3000"
+      - "3010:3010"
     environment:
-      NODE_ENV: development
-      PORT: 3000
-      MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
+      <<: *common-env
+      PORT: 3010
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - tradex-network
 
   # =============================================================================
-  # WebSocket Gateway Instances (Load Balanced with Nginx IP Hash)
+  # WebSocket Cluster
   # =============================================================================
   
-  # WebSocket Gateway Instance 1
   ws-gateway-1:
     build:
       context: .
@@ -229,30 +218,25 @@ services:
     container_name: tradex-ws-gateway-1
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "3002:3002"
     environment:
-      NODE_ENV: development
-      PORT: 3000
+      <<: *common-env
+      PORT: 3002
       INSTANCE_ID: ws-gateway-1
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       RABBITMQ_EXCHANGE: tradex.prices
       RABBITMQ_EXCHANGE_TYPE: topic
       RABBITMQ_QUEUE_PREFIX: ws-gateway
       RABBITMQ_ROUTING_PATTERNS: price.#
-      CORS_ORIGINS: "*"
-      LOG_LEVEL: debug
     depends_on:
       rabbitmq:
         condition: service_healthy
     networks:
       - tradex-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
       interval: 30s
-      timeout: 10s
       retries: 3
 
-  # WebSocket Gateway Instance 2
   ws-gateway-2:
     build:
       context: .
@@ -260,31 +244,27 @@ services:
     container_name: tradex-ws-gateway-2
     restart: unless-stopped
     ports:
-      - "3002:3000"
+      - "3003:3003"
     environment:
-      NODE_ENV: development
-      PORT: 3000
+      <<: *common-env
+      PORT: 3003 # Lưu ý: Trong container vẫn chạy port 3003
       INSTANCE_ID: ws-gateway-2
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       RABBITMQ_EXCHANGE: tradex.prices
       RABBITMQ_EXCHANGE_TYPE: topic
       RABBITMQ_QUEUE_PREFIX: ws-gateway
       RABBITMQ_ROUTING_PATTERNS: price.#
-      CORS_ORIGINS: "*"
-      LOG_LEVEL: debug
     depends_on:
       rabbitmq:
         condition: service_healthy
     networks:
       - tradex-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/health"]
       interval: 30s
-      timeout: 10s
       retries: 3
 
   # =============================================================================
-  # Nginx Load Balancer
+  # Load Balancer
   # =============================================================================
   
   nginx:
@@ -294,33 +274,24 @@ services:
     container_name: tradex-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:80" # Cổng chính cho WebSocket Client
     depends_on:
-      - ws-gateway-1
-      - ws-gateway-2
+      ws-gateway-1:
+        condition: service_healthy
+      ws-gateway-2:
+        condition: service_healthy
     networks:
       - tradex-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
-      timeout: 10s
       retries: 3
 
-# =============================================================================
-# Networks
-# =============================================================================
 networks:
   tradex-network:
     driver: bridge
-    name: tradex-network
 
-# =============================================================================
-# Volumes
-# =============================================================================
 volumes:
   rabbitmq_data:
-    name: tradex-rabbitmq-data
   mongodb_data:
-    name: tradex-mongodb-data
   redis_data:
-    name: tradex-redis-data

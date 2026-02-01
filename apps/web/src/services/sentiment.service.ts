@@ -1,14 +1,32 @@
 import axios from 'axios';
+import { authService } from './auth.service';
 
-const API_URL = 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
   return {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   };
+};
+
+const handleApiCall = async (apiCall: () => Promise<any>) => {
+  try {
+    return await apiCall();
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      try {
+        await authService.refreshToken();
+        return await apiCall();
+      } catch (refreshError) {
+        authService.logout();
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+    throw error;
+  }
 };
 
 /**
@@ -66,16 +84,13 @@ export const sentimentService = {
    * @param skip - Number of results to skip for pagination
    */
   getRecentSentiments: async (limit: number = 20, skip: number = 0): Promise<SentimentApiResponse[]> => {
-    try {
+    return handleApiCall(async () => {
       const response = await axios.get(`${API_URL}/sentiments`, {
         ...getAuthHeaders(),
         params: { limit, skip },
       });
       return response.data;
-    } catch (error: any) {
-      console.error('Failed to fetch recent sentiments:', error);
-      throw error.response ? error.response.data : error;
-    }
+    });
   },
 
   /**
@@ -106,13 +121,10 @@ export const sentimentService = {
    * @param sentimentId - MongoDB document ID
    */
   getSentimentById: async (sentimentId: string): Promise<SentimentApiResponse> => {
-    try {
+    return handleApiCall(async () => {
       const response = await axios.get(`${API_URL}/sentiments/${sentimentId}`, getAuthHeaders());
       return response.data;
-    } catch (error: any) {
-      console.error(`Failed to fetch sentiment ${sentimentId}:`, error);
-      throw error.response ? error.response.data : error;
-    }
+    });
   },
 
   /**
@@ -121,16 +133,13 @@ export const sentimentService = {
    * @param days - Number of days to calculate average
    */
   getAverageSentiment: async (symbol: string, days: number = 7): Promise<AverageSentimentResponse> => {
-    try {
+    return handleApiCall(async () => {
       const response = await axios.get(`${API_URL}/sentiments/symbol/${symbol}/average`, {
         ...getAuthHeaders(),
         params: { days },
       });
       return response.data;
-    } catch (error: any) {
-      console.error(`Failed to fetch average sentiment for ${symbol}:`, error);
-      throw error.response ? error.response.data : error;
-    }
+    });
   },
 
   /**
