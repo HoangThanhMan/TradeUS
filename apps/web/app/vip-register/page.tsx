@@ -88,22 +88,22 @@ export default function VipRegisterPage() {
       }
 
       try {
-        // Fetch user profile and QR config in parallel
-        const [userResponse, configResponse] = await Promise.all([
-          fetch(`${API_URL}/users/profile`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${API_URL}/vip/config`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ]);
+        // Fetch user profile first
+        const userResponse = await fetch(`${API_URL}/users/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (!userResponse.ok) {
+          // Chỉ redirect sang /auth nếu 401
+          if (userResponse.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('token');
+            router.push('/auth');
+            return;
+          }
           throw new Error('Failed to fetch profile');
         }
 
@@ -113,30 +113,45 @@ export default function VipRegisterPage() {
         // Update localStorage with fresh user data
         localStorage.setItem('user', JSON.stringify(userData));
 
-        if (configResponse.ok) {
-          const config = await configResponse.json();
-          if (config) {
-            setQrConfig(config);
-            // Update plans with actual prices
-            setPlans({
-              [VipPlan.MONTHLY]: {
-                ...DEFAULT_PLANS[VipPlan.MONTHLY],
-                price: config.monthlyPrice,
-                priceDisplay: config.monthlyPrice.toLocaleString(),
-              },
-              [VipPlan.YEARLY]: {
-                ...DEFAULT_PLANS[VipPlan.YEARLY],
-                price: config.yearlyPrice,
-                priceDisplay: config.yearlyPrice.toLocaleString(),
-              },
-            });
+        // Fetch QR config (may fail if not configured - that's OK)
+        try {
+          const configResponse = await fetch(`${API_URL}/vip/config`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (configResponse.ok) {
+            const configText = await configResponse.text();
+            // Chỉ parse JSON nếu có data
+            if (configText && configText !== 'null') {
+              const config = JSON.parse(configText);
+              if (config && config.monthlyPrice) {
+                setQrConfig(config);
+                // Update plans with actual prices
+                setPlans({
+                  [VipPlan.MONTHLY]: {
+                    ...DEFAULT_PLANS[VipPlan.MONTHLY],
+                    price: config.monthlyPrice,
+                    priceDisplay: config.monthlyPrice.toLocaleString(),
+                  },
+                  [VipPlan.YEARLY]: {
+                    ...DEFAULT_PLANS[VipPlan.YEARLY],
+                    price: config.yearlyPrice,
+                    priceDisplay: config.yearlyPrice.toLocaleString(),
+                  },
+                });
+              }
+            }
           }
+        } catch (configErr) {
+          // Ignore config errors - just use default plans
+          console.warn('Could not fetch QR config, using defaults');
         }
       } catch (err) {
         console.error('Error fetching data:', err);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
-        router.push('/auth');
+        // Không redirect sang /auth nữa - giữ user ở trang này
       } finally {
         setIsLoading(false);
       }

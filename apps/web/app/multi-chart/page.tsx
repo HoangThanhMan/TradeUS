@@ -28,8 +28,8 @@ const pjs = Plus_Jakarta_Sans({
 
 export default function MultiChartPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isLoading, setIsLoading] = useState(false); // Thêm biến loading để tránh hiện giao diện khi chưa check xong
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Thêm biến loading để tránh hiện giao diện khi chưa check xong
   
   const { socket, status, error } = useWebSocket(WS_URL);
   const {
@@ -52,6 +52,7 @@ export default function MultiChartPage() {
 
       try {
         // 4. Gọi API lấy thông tin User mới nhất từ Server
+        console.log('Fetching profile with token:', token?.substring(0, 20) + '...');
         const response = await fetch(`${API_URL}/users/profile`, {
           method: 'GET',
           headers: {
@@ -60,11 +61,34 @@ export default function MultiChartPage() {
           },
         });
 
+        console.log('Profile response status:', response.status);
+
         if (!response.ok) {
-          throw new Error('Failed to fetch profile');
+          const errorText = await response.text();
+          console.log('Profile error response:', errorText);
+          
+          // Nếu 401 Unauthorized -> Token hết hạn hoặc không hợp lệ
+          if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('token');
+            router.push('/auth');
+            return;
+          }
+          // Các lỗi khác -> Vẫn cho phép redirect sang vip-register
+          console.warn('Failed to fetch profile, redirecting to vip-register');
+          router.push('/vip-register');
+          return;
         }
 
-        const user = await response.json();
+        const userText = await response.text();
+        if (!userText) {
+          console.warn('Empty profile response, redirecting to vip-register');
+          router.push('/vip-register');
+          return;
+        }
+        
+        const user = JSON.parse(userText);
+        console.log('User data:', user);
 
         // 5. Kiểm tra quyền VIP
         if (user.vipStatus === VipStatus.ACTIVE || user.role === 'admin') {
@@ -77,16 +101,14 @@ export default function MultiChartPage() {
         }
       } catch (err) {
         console.error('Error checking VIP status:', err);
-        // Nếu lỗi token hoặc mạng -> Về trang đăng nhập
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
-        router.push('/auth');
+        // Lỗi mạng -> Redirect sang vip-register thay vì auth
+        router.push('/vip-register');
       } finally {
         setIsLoading(false);
       }
     };
 
-    // checkVipAccess();
+    checkVipAccess();
   }, [router]);
 
   // 6. Hiển thị màn hình chờ khi đang check quyền

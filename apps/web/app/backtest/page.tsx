@@ -24,8 +24,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1
 
 export default function BacktestPage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const { status } = useWebSocket(WS_URL);
@@ -50,10 +50,23 @@ export default function BacktestPage() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch profile');
+          if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('token');
+            router.push('/auth');
+            return;
+          }
+          router.push('/vip-register');
+          return;
         }
 
-        const user = await response.json();
+        const userText = await response.text();
+        if (!userText) {
+          router.push('/vip-register');
+          return;
+        }
+        
+        const user = JSON.parse(userText);
 
         if (user.vipStatus === VipStatus.ACTIVE || user.role === 'admin') {
           setIsAuthenticated(true);
@@ -63,15 +76,13 @@ export default function BacktestPage() {
         }
       } catch (err) {
         console.error('Error checking VIP status:', err);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
-        router.push('/auth');
+        router.push('/vip-register');
       } finally {
         setIsLoading(false);
       }
     };
 
-    // checkVipAccess();
+    checkVipAccess();
   }, [router]);
 
   const handleRunBacktest = async (config: BacktestConfig) => {

@@ -25,8 +25,8 @@ const POPULAR_SYMBOLS = Object.keys(SYMBOL_META);
 
 export default function MultiTimeframePage() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const { socket, status, error } = useWebSocket(WS_URL);
 
@@ -53,10 +53,23 @@ export default function MultiTimeframePage() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch profile');
+          if (response.status === 401) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('token');
+            router.push('/auth');
+            return;
+          }
+          router.push('/vip-register');
+          return;
         }
 
-        const user = await response.json();
+        const userText = await response.text();
+        if (!userText) {
+          router.push('/vip-register');
+          return;
+        }
+        
+        const user = JSON.parse(userText);
 
         if (user.vipStatus === VipStatus.ACTIVE || user.role === 'admin') {
           setIsAuthenticated(true);
@@ -66,15 +79,13 @@ export default function MultiTimeframePage() {
         }
       } catch (err) {
         console.error('Error checking VIP status:', err);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
-        router.push('/auth');
+        router.push('/vip-register');
       } finally {
         setIsLoading(false);
       }
     };
 
-    // checkVipAccess();
+    checkVipAccess();
   }, [router]);
 
   if (isLoading || !isAuthenticated) {

@@ -8,8 +8,10 @@ x-common-env: &common-env
   LOG_LEVEL: info
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
   REDIS_URL: redis://redis:6379
-  # Biến này dùng chung cho các Node.js service
   MONGODB_URI: mongodb://admin:password@mongodb:27017/tradex?authSource=admin
+  JWT_SECRET: tradex-dev-secret-key-2026
+  JWT_ACCESS_EXPIRY: 15m
+  JWT_REFRESH_EXPIRY: 7d
 
 services:
   # =============================================================================

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AdminController } from './admin.controller';
+import { AdminController, VipController } from './admin.controller';
 import { AdminService } from './admin.service';
 import {
   QrConfig,
@@ -19,7 +19,7 @@ import {
       { name: User.name, schema: userSchema },
     ]),
   ],
-  controllers: [AdminController],
+  controllers: [AdminController, VipController],
   providers: [AdminService],
   exports: [AdminService],
 })
