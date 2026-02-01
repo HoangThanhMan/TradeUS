@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     mongodb_database: str = "tradex_sentiment"
 
     # Google Gemini API configuration
-    gemini_api_key: str = "AIzaSyBWl1jgOBVNrJBPXH9rxichgx3KC8WHTYk"
+    gemini_api_key: str = "AIzaSyCONBjYAtgcb-u6--dR42zdA_KpxxmeaLo"
     gemini_model: str = "gemini-1.5-flash"
     use_mock_llm: bool = False  # Set to False to use real Gemini API
 

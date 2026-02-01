@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ProxyService, ServiceName } from '../proxy.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@tradex/auth-shared';
-import { UpdateUserDto, UserRole } from '@tradex/shared-types';
+import { UpdateUserDto, UserRole, ChangePasswordDto } from '@tradex/shared-types';
 import type { IJwtPayload } from '@tradex/shared-types';
 import type { Request } from 'express'; // <--- 2. Thêm type Request (nếu dùng express)
 
@@ -41,6 +41,20 @@ export class UserProxyController {
       method: 'PUT',
       path: `/users/${user.userId}`,
       data: updateUserDto,
+      headers: req.headers as Record<string, string>,
+    });
+  }
+
+  @Put('profile/password')
+  async changeMyPassword(
+    @CurrentUser() user: IJwtPayload,
+    @Body() changePasswordDto: ChangePasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.proxyService.forward(ServiceName.USER, {
+      method: 'PUT',
+      path: `/users/${user.userId}/password`,
+      data: changePasswordDto,
       headers: req.headers as Record<string, string>,
     });
   }
