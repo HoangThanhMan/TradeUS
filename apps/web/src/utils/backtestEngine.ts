@@ -1,4 +1,4 @@
-// src/utils/backtestEngine.ts - FIXED VERSION WITH IMPROVED LOGIC
+// src/utils/backtestEngine.ts - WITH MOCK AI PREDICTION
 import {
   BacktestConfig,
   BacktestResult,
@@ -167,7 +167,7 @@ export class HistoricalDataFetcher {
 
 /**
  * ==========================================
- * BACKTEST ENGINE - FIXED LOGIC
+ * BACKTEST ENGINE - WITH MOCK AI
  * ==========================================
  */
 export class BacktestEngine {
@@ -322,11 +322,14 @@ export class BacktestEngine {
 
       // AI prediction check (if enabled)
       if (this.config.advancedOptions.useAIPrediction) {
-        const aiPrediction = await this.getAIPrediction(candle.time);
+        const aiPrediction = await this.getAIPrediction(candle.time, index);
         if (!aiPrediction || aiPrediction.direction !== 'UP') {
           console.log(`🤖 AI prediction rejected entry at index ${index}`);
           return;
         }
+        console.log(
+          `✅ AI APPROVED entry at index ${index} (confidence: ${(aiPrediction.confidence * 100).toFixed(1)}%)`,
+        );
       }
 
       this.enterPosition(index, candle, `${strategy.name} Signal`);
@@ -346,13 +349,143 @@ export class BacktestEngine {
     if (!signalMet) return;
 
     if (this.config.advancedOptions.useAIPrediction) {
-      const aiPrediction = await this.getAIPrediction(candle.time);
+      const aiPrediction = await this.getAIPrediction(candle.time, index);
       if (!aiPrediction || aiPrediction.direction !== 'UP') {
         return;
       }
     }
 
     this.enterPosition(index, candle, 'Custom strategy conditions met');
+  }
+
+  /**
+   * 🤖 MOCK AI PREDICTION - Simulates intelligent trading AI
+   * Uses multiple technical indicators to generate realistic predictions
+   */
+  private async getAIPrediction(
+    timestamp: number,
+    currentIndex: number,
+  ): Promise<AIPrediction | null> {
+    if (currentIndex < 50) return null;
+
+    const candle = this.candles[currentIndex];
+    const rsi = this.indicators.get('RSI_14');
+    const sma20 = this.indicators.get('SMA_20');
+    const sma50 = this.indicators.get('SMA_50');
+    const macd = this.indicators.get('MACD');
+    const signal = this.indicators.get('MACD_Signal');
+
+    if (!rsi || !sma20 || !sma50 || !macd || !signal) return null;
+
+    // Calculate prediction score (0-100)
+    let score = 50; // Neutral start
+    let confidence = 0.5;
+
+    // Factor 1: RSI momentum (30% weight)
+    const currRSI = rsi[currentIndex];
+    if (!isNaN(currRSI)) {
+      if (currRSI < 35) {
+        score += 15; // Oversold = bullish
+        confidence += 0.1;
+      } else if (currRSI > 65) {
+        score -= 15; // Overbought = bearish
+        confidence += 0.1;
+      }
+    }
+
+    // Factor 2: Price vs MA (30% weight)
+    const price = candle.close;
+    const currSMA20 = sma20[currentIndex];
+    const currSMA50 = sma50[currentIndex];
+
+    if (!isNaN(currSMA20) && !isNaN(currSMA50)) {
+      const priceVsSMA20 = ((price - currSMA20) / currSMA20) * 100;
+      const sma20VsSMA50 = ((currSMA20 - currSMA50) / currSMA50) * 100;
+
+      if (priceVsSMA20 > 0 && sma20VsSMA50 > 0) {
+        score += 15; // Strong uptrend
+        confidence += 0.15;
+      } else if (priceVsSMA20 < 0 && sma20VsSMA50 < 0) {
+        score -= 15; // Strong downtrend
+        confidence += 0.15;
+      }
+    }
+
+    // Factor 3: MACD momentum (20% weight)
+    const currMACD = macd[currentIndex];
+    const currSignal = signal[currentIndex];
+    const prevMACD = macd[currentIndex - 1];
+    const prevSignal = signal[currentIndex - 1];
+
+    if (!isNaN(currMACD) && !isNaN(currSignal)) {
+      const macdDiff = currMACD - currSignal;
+      const prevMACDDiff = prevMACD - prevSignal;
+
+      if (macdDiff > 0 && prevMACDDiff < 0) {
+        score += 10; // Bullish crossover
+        confidence += 0.1;
+      } else if (macdDiff < 0 && prevMACDDiff > 0) {
+        score -= 10; // Bearish crossover
+        confidence += 0.1;
+      }
+    }
+
+    // Factor 4: Recent price action (20% weight)
+    if (currentIndex >= 5) {
+      const recentCandles = this.candles.slice(currentIndex - 5, currentIndex);
+      const upCandles = recentCandles.filter((c) => c.close > c.open).length;
+      const downCandles = recentCandles.filter((c) => c.close < c.open).length;
+
+      if (upCandles > 3) {
+        score += 10; // Bullish momentum
+      } else if (downCandles > 3) {
+        score -= 10; // Bearish momentum
+      }
+    }
+
+    // Add some randomness to simulate AI uncertainty (±5%)
+    const randomness = (Math.random() - 0.5) * 10;
+    score += randomness;
+
+    // Clamp score and confidence
+    score = Math.max(0, Math.min(100, score));
+    confidence = Math.max(0.3, Math.min(0.95, confidence));
+
+    // Determine direction based on score
+    let direction: 'UP' | 'DOWN' | 'NEUTRAL';
+    if (score >= 60) {
+      direction = 'UP';
+    } else if (score <= 40) {
+      direction = 'DOWN';
+    } else {
+      direction = 'NEUTRAL';
+    }
+
+    // AI only gives prediction 70% of the time (simulates uncertainty)
+    if (Math.random() > 0.7) {
+      console.log(
+        `🤖 AI SKIPPED prediction at index ${currentIndex} (uncertain)`,
+      );
+      return null;
+    }
+
+    const predictedPriceChange =
+      direction === 'UP' ? 1.02 : direction === 'DOWN' ? 0.98 : 1.0;
+
+    const prediction: AIPrediction = {
+      timestamp,
+      symbol: this.config.symbol,
+      predictedPrice: price * predictedPriceChange,
+      direction,
+      confidence,
+      modelId: 'mock_ai_v1_technical_analysis',
+    };
+
+    console.log(
+      `🤖 AI PREDICTION at index ${currentIndex}: ${direction} (confidence: ${(confidence * 100).toFixed(1)}%, score: ${score.toFixed(1)})`,
+    );
+
+    return prediction;
   }
 
   /**
@@ -916,13 +1049,6 @@ export class BacktestEngine {
 
     const values = this.indicators.get(key);
     return values ? values[index] : NaN;
-  }
-
-  private async getAIPrediction(
-    timestamp: number,
-  ): Promise<AIPrediction | null> {
-    // Placeholder for AI prediction
-    return null;
   }
 
   private calculateSummary(): BacktestSummary {

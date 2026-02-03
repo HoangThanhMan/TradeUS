@@ -80,7 +80,8 @@ export default function VipRegisterPage() {
   useEffect(() => {
     const fetchData = async () => {
       const token =
-        localStorage.getItem('accessToken') || localStorage.getItem('token');
+        sessionStorage.getItem('accessToken') ||
+        sessionStorage.getItem('token');
 
       if (!token) {
         router.push('/auth');
@@ -99,8 +100,8 @@ export default function VipRegisterPage() {
         if (!userResponse.ok) {
           // Chỉ redirect sang /auth nếu 401
           if (userResponse.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('token');
             router.push('/auth');
             return;
           }
@@ -110,8 +111,8 @@ export default function VipRegisterPage() {
         const userData = await userResponse.json();
         setUser(userData);
 
-        // Update localStorage with fresh user data
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Update sessionStorage with fresh user data
+        sessionStorage.setItem('user', JSON.stringify(userData));
 
         // Fetch QR config (may fail if not configured - that's OK)
         try {
@@ -222,16 +223,16 @@ export default function VipRegisterPage() {
             <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <IconSparkles className="w-10 h-10 text-yellow-600" />
             </div>
-            <h1 className="text-2xl font-bold text-yellow-600 mb-2">
+            <h1 className="text-xl font-bold text-yellow-600 mb-2">
               Payment Pending Approval
             </h1>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 text-[14px] mb-6">
               Your request has been submitted. Admin will verify and activate
               your account within 24 hours.
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-xl transition-colors"
+              className="w-full bg-gray-200 hover:bg-gray-300 text-[16px] text-gray-800 font-semibold py-3 rounded-xl transition-colors"
             >
               Back to Dashboard
             </button>
@@ -250,7 +251,7 @@ export default function VipRegisterPage() {
     if (!selectedPlan) return;
 
     const token =
-      localStorage.getItem('accessToken') || localStorage.getItem('token');
+      sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
     if (!token) {
       router.push('/auth');
       return;
@@ -274,7 +275,7 @@ export default function VipRegisterPage() {
           vipStatus: VipStatus.PENDING,
           vipPlan: selectedPlan,
         });
-        localStorage.setItem(
+        sessionStorage.setItem(
           'user',
           JSON.stringify({
             ...user,
@@ -399,21 +400,31 @@ export default function VipRegisterPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-12">
         {/* Title Section */}
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <IconStar className="w-8 h-8 text-yellow-500 fill-yellow-500" />
-            <h1 className="text-4xl font-bold text-gray-800">Upgrade to VIP</h1>
+        <div className="text-center mb-7">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <IconSparkles className="w-8 h-8 text-yellow-500 fill-yellow-500" />
+            <h1 className="text-[25px] font-bold text-gray-800">
+              Upgrade to VIP
+            </h1>
+            <IconSparkles className="w-8 h-8 text-yellow-500 fill-yellow-500" />
           </div>
-          <p className="text-gray-500 text-lg">
+          <p className="text-gray-500 text-[17px]">
             Unlock all premium features and become a professional trader
           </p>
         </div>
 
         {/* Current Account Status */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-10 max-w-lg mx-auto">
-          <div className="flex items-center justify-center gap-3 text-gray-600">
-            <span>Current account of {user?.username || user?.email}:</span>
-            <span className="flex items-center gap-2 font-semibold">
+          <div className="flex items-center justify-center gap-3 text-gray-600 text-[15px]">
+            <span>
+              Current account of{' '}
+              <span className="font-semibold text-gray-900">
+                {user?.username || user?.email}
+              </span>
+              :
+            </span>
+
+            <span className="flex items-center gap-2 font-semibold text-gray-700">
               <IconCalendar className="w-5 h-5 text-gray-400" />
               Free Plan
             </span>
@@ -423,15 +434,15 @@ export default function VipRegisterPage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Monthly Plan */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 relative">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 relative flex flex-col">
             <div className="flex items-center gap-2 mb-4">
-              <IconCalendar className="w-5 h-5 text-gray-400" />
+              <IconSparkles className="w-5 h-5 text-indigo-500" />
               <h3 className="text-xl font-bold text-gray-800">
                 {plans[VipPlan.MONTHLY].name}
               </h3>
             </div>
 
-            <div className="mb-6">
+            <div className="min-h-[72px] pt-5">
               <span className="text-4xl font-bold text-blue-600">
                 {plans[VipPlan.MONTHLY].priceDisplay}
               </span>
@@ -451,7 +462,7 @@ export default function VipRegisterPage() {
 
             <button
               onClick={() => handleSelectPlan(VipPlan.MONTHLY)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="mt-auto text-[15px] w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <IconSparkles className="w-5 h-5" />
               Select monthly plan
@@ -459,7 +470,7 @@ export default function VipRegisterPage() {
           </div>
 
           {/* Yearly Plan */}
-          <div className="bg-white rounded-2xl shadow-lg border-2 border-yellow-400 p-8 relative">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 relative flex flex-col">
             {/* Most Popular Badge */}
             <div className="absolute -top-3 right-6">
               <span className="bg-yellow-400 text-gray-800 text-xs font-bold px-4 py-1.5 rounded-full uppercase">
@@ -468,23 +479,31 @@ export default function VipRegisterPage() {
             </div>
 
             <div className="flex items-center gap-2 mb-4">
-              <IconCalendar className="w-5 h-5 text-gray-400" />
+              <IconCrown className="w-5 h-5 text-yellow-400" />
               <h3 className="text-xl font-bold text-gray-800">
                 {plans[VipPlan.YEARLY].name}
               </h3>
             </div>
 
-            <div className="mb-2">
-              <span className="text-4xl font-bold text-yellow-500">
-                {plans[VipPlan.YEARLY].priceDisplay}
-              </span>
-              <span className="text-gray-500 ml-1">
-                VND/{plans[VipPlan.YEARLY].duration}
-              </span>
+            <div className="min-h-[72px]">
+              {/* Original price */}
+              <div className="text-sm text-gray-400 line-through">
+                1.188.000 VND/year
+              </div>
+
+              {/* Discounted price */}
+              <div>
+                <span className="text-4xl font-bold text-yellow-500">
+                  {plans[VipPlan.YEARLY].priceDisplay}
+                </span>
+                <span className="text-gray-500 ml-1">
+                  VND/{plans[VipPlan.YEARLY].duration}
+                </span>
+              </div>
             </div>
 
             {/* Savings Badge */}
-            <div className="mb-6">
+            <div className="mb-3">
               <span className="inline-flex items-center gap-1.5 bg-yellow-100 text-yellow-700 text-sm font-medium px-3 py-1.5 rounded-lg">
                 <IconGift className="w-4 h-4" />
                 {DEFAULT_PLANS[VipPlan.YEARLY].savings}
@@ -502,7 +521,7 @@ export default function VipRegisterPage() {
 
             <button
               onClick={() => handleSelectPlan(VipPlan.YEARLY)}
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full text-[15px] bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               <IconCrown className="w-5 h-5" />
               Select yearly plan

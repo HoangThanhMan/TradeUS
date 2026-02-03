@@ -103,8 +103,9 @@ export default function AdminPage() {
   useEffect(() => {
     const checkAdmin = async () => {
       const token =
-        localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const userData = localStorage.getItem('user');
+        sessionStorage.getItem('accessToken') ||
+        sessionStorage.getItem('token');
+      const userData = sessionStorage.getItem('user');
 
       if (!token || !userData) {
         router.push('/auth');
@@ -147,9 +148,20 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        const config = await response.json();
-        if (config) {
-          setQrConfig(config);
+        const text = await response.text();
+
+        if (!text || text.trim() === '') {
+          console.log('No existing QR config, using defaults');
+          return;
+        }
+
+        try {
+          const config = JSON.parse(text);
+          if (config) {
+            setQrConfig(config);
+          }
+        } catch (parseError) {
+          console.error('Error parsing QR config JSON:', parseError);
         }
       }
     } catch (err) {
@@ -182,7 +194,7 @@ export default function AdminPage() {
 
   const handleSaveConfig = async () => {
     const token =
-      localStorage.getItem('accessToken') || localStorage.getItem('token');
+      sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
     if (!token) return;
 
     setIsSavingConfig(true);
@@ -211,7 +223,7 @@ export default function AdminPage() {
 
   const handleApprove = async (requestId: string) => {
     const token =
-      localStorage.getItem('accessToken') || localStorage.getItem('token');
+      sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
     if (!token) return;
 
     setProcessingId(requestId);
@@ -241,7 +253,7 @@ export default function AdminPage() {
 
   const handleReject = async (requestId: string) => {
     const token =
-      localStorage.getItem('accessToken') || localStorage.getItem('token');
+      sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
     if (!token) return;
 
     const note = prompt('Reason for rejection (optional):');
@@ -305,8 +317,8 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-            <IconSettings className="w-6 h-6 text-gray-600" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <IconSettings className="w-8 h-8 text-gray-600" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
@@ -361,7 +373,7 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column - Form */}
-              <div className="space-y-4">
+              <div className="space-y-4 text-black">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Bank
@@ -531,7 +543,7 @@ export default function AdminPage() {
             </div>
 
             {/* Save Button */}
-            <div className="mt-6 pt-6 border-t border-gray-100">
+            <div className="mt-6 pt-6 text-[13px] border-t border-gray-100">
               <button
                 onClick={handleSaveConfig}
                 disabled={isSavingConfig}
@@ -566,12 +578,12 @@ export default function AdminPage() {
               <button
                 onClick={() => {
                   const token =
-                    localStorage.getItem('accessToken') ||
-                    localStorage.getItem('token');
+                    sessionStorage.getItem('accessToken') ||
+                    sessionStorage.getItem('token');
                   if (token) loadVipRequests(token);
                 }}
                 disabled={isLoadingRequests}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+                className="flex items-center gap-2 px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors text-[14px]"
               >
                 <IconRefresh
                   className={`w-4 h-4 ${isLoadingRequests ? 'animate-spin' : ''}`}
@@ -627,16 +639,16 @@ export default function AdminPage() {
 
                       {/* Amount & Plan */}
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-800">
+                        <p className="text-xl font-bold text-gray-800">
                           $ {request.amount.toLocaleString()}{' '}
                           <span className="text-sm font-normal">VND</span>
                         </p>
-                        <div className="flex items-center gap-1 text-gray-500 text-sm mt-1 justify-end">
+                        <div className="flex font-semibold items-center gap-1 text-yellow-500 text-[13px] mt-1 justify-end">
                           <IconCrown className="w-3.5 h-3.5" />
                           Plan: {request.plan}
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          VIP {request.plan.toLowerCase()} plan upgrade
+                          VIP {request.plan.toUpperCase()} plan upgrade
                         </p>
                       </div>
 
@@ -645,7 +657,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => handleApprove(request._id)}
                           disabled={processingId === request._id}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-2 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors text-[12px] disabled:opacity-50"
                         >
                           <IconCheck className="w-4 h-4" />
                           Approve
@@ -653,7 +665,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => handleReject(request._id)}
                           disabled={processingId === request._id}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors text-sm disabled:opacity-50"
+                          className="flex items-center justify-center gap-1.5 px-2 py-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-lg transition-colors text-[12px] disabled:opacity-50"
                         >
                           <IconX className="w-4 h-4" />
                           Reject

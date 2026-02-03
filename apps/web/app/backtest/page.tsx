@@ -33,7 +33,7 @@ export default function BacktestPage() {
   useEffect(() => {
     const checkVipAccess = async () => {
       const token =
-        localStorage.getItem('accessToken') || localStorage.getItem('token');
+        sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
 
       if (!token) {
         router.push('/auth');
@@ -51,8 +51,8 @@ export default function BacktestPage() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('token');
             router.push('/auth');
             return;
           }
@@ -168,7 +168,7 @@ export default function BacktestPage() {
       </div>
 
       {/* Main Content - Scrollable container */}
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 overflow-auto bg-gray-50 p-2">
         {/* Config Section */}
         <div>
           <BacktestConfigComponent

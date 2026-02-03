@@ -11,8 +11,8 @@ export interface PriceMessage {
   quoteVolume: number;
   source: string;
   streamType: string;
-  interval?: string;   
-  isClosed?: boolean
+  interval?: string;
+  isClosed?: boolean;
   openTime?: number;
 }
 
@@ -28,7 +28,7 @@ export interface CandlestickData {
 
 export interface HistoricalDataMessage {
   symbol: string;
-  interval?: string; // Made optional for backward compatibility
+  interval?: string;
   source: string;
   dataType: 'historical';
   count: number;
@@ -38,7 +38,7 @@ export interface HistoricalDataMessage {
 
 export interface WebSocketMessage {
   symbol: string;
-  interval?: string; // Added interval support
+  interval?: string;
   timeframe?: string; // Deprecated, use interval
   data: PriceMessage | HistoricalDataMessage;
   instanceId: string;
@@ -49,4 +49,45 @@ export interface ConnectionStatus {
   connected: boolean;
   clientId: string | null;
   instanceId: string | null;
+}
+
+// Order Book Types
+export interface OrderBookLevel {
+  price: string;
+  quantity: string;
+  total?: number;
+}
+
+export interface OrderBookSnapshot {
+  symbol: string;
+  timestamp: number;
+  bids: [string, string][];
+  asks: [string, string][];
+  lastUpdateId: number;
+}
+
+export interface OrderBookUpdate {
+  symbol: string;
+  timestamp: number;
+  bids: [string, string][];
+  asks: [string, string][];
+  firstUpdateId: number;
+  lastUpdateId: number;
+  eventTime: number;
+}
+
+export interface OrderBookMessage {
+  type: 'snapshot' | 'update';
+  symbol: string;
+  data: OrderBookSnapshot | OrderBookUpdate;
+  instanceId: string;
+  timestamp: number;
+}
+
+export interface OrderBookData {
+  symbol: string;
+  bids: OrderBookLevel[];
+  asks: OrderBookLevel[];
+  lastUpdateId: number;
+  timestamp: number;
 }

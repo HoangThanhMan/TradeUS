@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { authService } from './auth.service';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token =
+    sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
   return {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -83,7 +85,10 @@ export const sentimentService = {
    * @param limit - Maximum number of results (1-100)
    * @param skip - Number of results to skip for pagination
    */
-  getRecentSentiments: async (limit: number = 20, skip: number = 0): Promise<SentimentApiResponse[]> => {
+  getRecentSentiments: async (
+    limit: number = 20,
+    skip: number = 0,
+  ): Promise<SentimentApiResponse[]> => {
     return handleApiCall(async () => {
       const response = await axios.get(`${API_URL}/sentiments`, {
         ...getAuthHeaders(),
@@ -102,13 +107,16 @@ export const sentimentService = {
   getSentimentsBySymbol: async (
     symbol: string,
     limit: number = 10,
-    skip: number = 0
+    skip: number = 0,
   ): Promise<SentimentApiResponse[]> => {
     try {
-      const response = await axios.get(`${API_URL}/sentiments/symbol/${symbol}`, {
-        ...getAuthHeaders(),
-        params: { limit, skip },
-      });
+      const response = await axios.get(
+        `${API_URL}/sentiments/symbol/${symbol}`,
+        {
+          ...getAuthHeaders(),
+          params: { limit, skip },
+        },
+      );
       return response.data;
     } catch (error: any) {
       console.error(`Failed to fetch sentiments for ${symbol}:`, error);
@@ -120,9 +128,14 @@ export const sentimentService = {
    * Get a specific sentiment by ID
    * @param sentimentId - MongoDB document ID
    */
-  getSentimentById: async (sentimentId: string): Promise<SentimentApiResponse> => {
+  getSentimentById: async (
+    sentimentId: string,
+  ): Promise<SentimentApiResponse> => {
     return handleApiCall(async () => {
-      const response = await axios.get(`${API_URL}/sentiments/${sentimentId}`, getAuthHeaders());
+      const response = await axios.get(
+        `${API_URL}/sentiments/${sentimentId}`,
+        getAuthHeaders(),
+      );
       return response.data;
     });
   },
@@ -132,12 +145,18 @@ export const sentimentService = {
    * @param symbol - Crypto trading pair
    * @param days - Number of days to calculate average
    */
-  getAverageSentiment: async (symbol: string, days: number = 7): Promise<AverageSentimentResponse> => {
+  getAverageSentiment: async (
+    symbol: string,
+    days: number = 7,
+  ): Promise<AverageSentimentResponse> => {
     return handleApiCall(async () => {
-      const response = await axios.get(`${API_URL}/sentiments/symbol/${symbol}/average`, {
-        ...getAuthHeaders(),
-        params: { days },
-      });
+      const response = await axios.get(
+        `${API_URL}/sentiments/symbol/${symbol}/average`,
+        {
+          ...getAuthHeaders(),
+          params: { days },
+        },
+      );
       return response.data;
     });
   },
@@ -148,7 +167,11 @@ export const sentimentService = {
    */
   collectReddit: async (request?: CollectRedditRequest): Promise<any> => {
     try {
-      const response = await axios.post(`${API_URL}/collect/reddit`, request || {}, getAuthHeaders());
+      const response = await axios.post(
+        `${API_URL}/collect/reddit`,
+        request || {},
+        getAuthHeaders(),
+      );
       return response.data;
     } catch (error: any) {
       console.error('Failed to collect Reddit posts:', error);
@@ -162,7 +185,11 @@ export const sentimentService = {
    */
   collectYahoo: async (request?: CollectYahooRequest): Promise<any> => {
     try {
-      const response = await axios.post(`${API_URL}/collect/yahoo`, request || {}, getAuthHeaders());
+      const response = await axios.post(
+        `${API_URL}/collect/yahoo`,
+        request || {},
+        getAuthHeaders(),
+      );
       return response.data;
     } catch (error: any) {
       console.error('Failed to collect Yahoo news:', error);

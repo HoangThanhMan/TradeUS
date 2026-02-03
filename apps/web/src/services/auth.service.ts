@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   return {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -19,9 +19,9 @@ export const authService = {
         password,
       });
       if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+        sessionStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
-           localStorage.setItem('refreshToken', response.data.refreshToken);
+           sessionStorage.setItem('refreshToken', response.data.refreshToken);
         }
       }
       return response.data;
@@ -42,7 +42,7 @@ export const authService = {
       });
       
       if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+        sessionStorage.setItem('accessToken', response.data.accessToken);
       }
       
       return response.data;
@@ -55,7 +55,7 @@ export const authService = {
 
   getCurrentUser: async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken');
       if (!token) return null;
 
       const response = await axios.get(`${API_URL}/users/profile`, getAuthHeaders());
@@ -69,15 +69,15 @@ export const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     window.location.href = '/auth'; 
   },
   
   refreshToken: async () => {
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = sessionStorage.getItem('refreshToken');
       if(!refreshToken) throw new Error("No refresh token");
       
       const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -85,7 +85,7 @@ export const authService = {
       });
       
       if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+        sessionStorage.setItem('accessToken', response.data.accessToken);
       }
       return response.data;
   }

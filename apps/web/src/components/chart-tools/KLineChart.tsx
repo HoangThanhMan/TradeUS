@@ -38,6 +38,7 @@ interface KLineChartProps {
   symbol: string;
   chartType?: string;
   settings?: ChartSettings;
+  timezone?: string;
   onVolPaneCreated?: (paneId: string) => void;
   isLocked?: boolean;
 }
@@ -48,6 +49,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
     symbol,
     chartType = 'candle_solid',
     settings = DEFAULT_CHART_SETTINGS,
+    timezone = 'Asia/Ho_Chi_Minh',
     onVolPaneCreated,
     isLocked = false,
   },
@@ -70,6 +72,16 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
     if (!chartInstance.current || !chartReady) return;
     applySettings(chartInstance.current, settings);
   }, [settings, chartReady]);
+
+  // ── Apply timezone when it changes
+  useEffect(() => {
+    if (!chartInstance.current || !chartReady) return;
+    try {
+      chartInstance.current.setTimezone(timezone);
+    } catch (e) {
+      console.error('Error setting timezone:', e);
+    }
+  }, [timezone, chartReady]);
 
   // ── Chart type change ──
   useEffect(() => {
@@ -288,6 +300,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
           },
         },
         locale: 'en-US',
+        timezone: timezone,
       });
 
       chartInstance.current.setZoomEnabled(!isLocked);
@@ -328,7 +341,7 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
         }
       }
     };
-  }, [symbol, onVolPaneCreated]);
+  }, [symbol, onVolPaneCreated, timezone]);
 
   // ── Resize observer ──
   useEffect(() => {
@@ -376,8 +389,8 @@ export const KLineChart = forwardRef<any, KLineChartProps>(function KLineChart(
         if (l > minOC) l = minOC;
 
         const avg = (o + cl) / 2;
-        if (Math.abs(cl - o) < avg * 0.0000012) {
-          cl = cl >= o ? o + avg * 0.0000012 : o - avg * 0.0000012;
+        if (Math.abs(cl - o) < avg * 0.000001) {
+          cl = cl >= o ? o + avg * 0.000001 : o - avg * 0.000001;
           h = Math.max(h, cl);
           l = Math.min(l, cl);
         }

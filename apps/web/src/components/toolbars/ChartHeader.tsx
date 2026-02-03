@@ -172,7 +172,7 @@ export function ChartHeader({
               </div>
 
               {/* Symbols List */}
-              <div className="max-h-[500px] overflow-y-autox">
+              <div className="max-h-[500px] overflow-y-auto">
                 {Object.entries(groupedSymbols).map(([category, symbols]) => (
                   <div key={category}>
                     <div className="sticky top-0 px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 border-b border-gray-200">

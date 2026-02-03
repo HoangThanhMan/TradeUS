@@ -43,7 +43,7 @@ export default function MultiChartPage() {
   useEffect(() => {
     const checkVipAccess = async () => {
       // 3. Lấy token (kiểm tra cả 'accessToken' và 'token' để chắc chắn)
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const token = sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
       
       if (!token) {
         router.push('/auth');
@@ -69,8 +69,8 @@ export default function MultiChartPage() {
           
           // Nếu 401 Unauthorized -> Token hết hạn hoặc không hợp lệ
           if (response.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('token');
             router.push('/auth');
             return;
           }

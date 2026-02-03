@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { authService } from './auth.service';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  const token =
+    sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
   return {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -77,15 +79,15 @@ export const predictionService = {
   /**
    * Get price prediction for a symbol and interval
    */
-  getPrediction: async (symbol: string, interval: string = '1h'): Promise<PredictionResponse> => {
+  getPrediction: async (
+    symbol: string,
+    interval: string = '1h',
+  ): Promise<PredictionResponse> => {
     return handleApiCall(async () => {
-      const response = await axios.get(
-        `${API_URL}/predictions/predict`,
-        {
-          params: { symbol, interval },
-          ...getAuthHeaders(),
-        }
-      );
+      const response = await axios.get(`${API_URL}/predictions/predict`, {
+        params: { symbol, interval },
+        ...getAuthHeaders(),
+      });
       return response.data;
     });
   },
@@ -97,7 +99,7 @@ export const predictionService = {
     try {
       const response = await axios.get(
         `${API_URL}/predictions/buffer-status`,
-        getAuthHeaders()
+        getAuthHeaders(),
       );
       return response.data;
     } catch (error: any) {
@@ -113,7 +115,7 @@ export const predictionService = {
     return handleApiCall(async () => {
       const response = await axios.get(
         `${API_URL}/predictions/model-info`,
-        getAuthHeaders()
+        getAuthHeaders(),
       );
       return response.data;
     });
@@ -126,7 +128,7 @@ export const predictionService = {
     try {
       const response = await axios.get(
         `${API_URL}/predictions/symbols`,
-        getAuthHeaders()
+        getAuthHeaders(),
       );
       return response.data;
     } catch (error: any) {

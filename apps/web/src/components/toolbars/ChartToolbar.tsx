@@ -27,8 +27,10 @@ interface ChartToolbarProps {
   chartType: string;
   chartContainerRef?: React.RefObject<HTMLDivElement | null>;
   settings: ChartSettings;
+  selectedTimezone: string;
   onSymbolChange: (symbol: string) => void;
   onTimeframeChange: (tf: string) => void;
+  onTimezoneChange: (tz: string) => void;
   onChartTypeChange: (type: string) => void;
   onSettingsChange: (s: ChartSettings) => void;
   onIndicatorClick?: () => void;
@@ -247,9 +249,11 @@ export function ChartToolbar({
   chartType,
   chartContainerRef,
   settings,
+  selectedTimezone,
   onSymbolChange,
   onTimeframeChange,
   onChartTypeChange,
+  onTimezoneChange,
   onSettingsChange,
   onIndicatorClick,
 }: ChartToolbarProps) {
@@ -274,7 +278,6 @@ export function ChartToolbar({
   const [timezoneOpen, setTimezoneOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [selectedTimezone, setSelectedTimezone] = useState('Asia/Ho_Chi_Minh');
   const [toast, setToast] = useState<{
     message: string;
     filePath?: string;
@@ -490,16 +493,16 @@ export function ChartToolbar({
                   <button
                     key={tz.value}
                     onClick={() => {
-                      setSelectedTimezone(tz.value);
+                      onTimezoneChange(tz.value); // ← Dùng callback từ props
                       setTimezoneOpen(false);
                     }}
                     className={`w-full font-medium text-left px-3 py-2 text-xs hover:bg-gray-50 flex items-center justify-between ${
-                      selectedTimezone === tz.value ? 'bg-blue-50' : ''
+                      selectedTimezone === tz.value ? 'bg-blue-50' : '' // ← Dùng prop selectedTimezone
                     }`}
                   >
                     <span
                       className={
-                        selectedTimezone === tz.value
+                        selectedTimezone === tz.value // ← Dùng prop selectedTimezone
                           ? 'text-blue-600 font-semibold'
                           : 'text-gray-700'
                       }

@@ -12,8 +12,10 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import { SYMBOL_META } from '../../src/constants/symbols';
 import { VipStatus } from '@tradex/shared-types';
 
-const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const WS_URL =
+  process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -36,7 +38,8 @@ export default function MultiTimeframePage() {
   useEffect(() => {
     const checkVipAccess = async () => {
       const token =
-        localStorage.getItem('accessToken') || localStorage.getItem('token');
+        sessionStorage.getItem('accessToken') ||
+        sessionStorage.getItem('token');
 
       if (!token) {
         router.push('/auth');
@@ -54,8 +57,8 @@ export default function MultiTimeframePage() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('token');
             router.push('/auth');
             return;
           }
@@ -68,7 +71,7 @@ export default function MultiTimeframePage() {
           router.push('/vip-register');
           return;
         }
-        
+
         const user = JSON.parse(userText);
 
         if (user.vipStatus === VipStatus.ACTIVE || user.role === 'admin') {
@@ -109,7 +112,7 @@ export default function MultiTimeframePage() {
       <Header status={status} />
 
       {/* Compact Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
         <div className="flex px-30 items-center justify-between">
           {/* Left: Title and Description */}
           <div className="flex items-center gap-3">
@@ -133,7 +136,7 @@ export default function MultiTimeframePage() {
           {/* Right: Symbol Selector and Popular Symbols */}
           <div className="flex items-center gap-4">
             {/* Symbol Dropdown */}
-            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg">
+            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
               <span className="text-[11px] text-gray-600 font-medium">
                 Symbol:
               </span>
@@ -149,7 +152,7 @@ export default function MultiTimeframePage() {
                 Popular:
               </span>
               <div className="flex items-center gap-1.5">
-                {POPULAR_SYMBOLS.map((base) => {
+                {POPULAR_SYMBOLS.slice(0, 7).map((base) => {
                   const fullSymbol = `${base}USDT`;
                   return (
                     <button

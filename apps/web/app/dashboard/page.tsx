@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [timeframe, setTimeframe] = useState('1m');
   const [chartType, setChartType] = useState('candle_solid');
+  const [selectedTimezone, setSelectedTimezone] = useState('Asia/Ho_Chi_Minh');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
@@ -58,7 +59,7 @@ export default function DashboardPage() {
   } = useDrawingManager(chartInstanceRef.current);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       router.push('/auth');
     } else {
@@ -110,8 +111,10 @@ export default function DashboardPage() {
             chartType={chartType}
             chartContainerRef={chartContainerRef}
             settings={settings}
+            selectedTimezone={selectedTimezone}
             onSymbolChange={setSymbol}
             onTimeframeChange={setTimeframe}
+            onTimezoneChange={setSelectedTimezone}
             onChartTypeChange={setChartType}
             onSettingsChange={updateSettings}
             onIndicatorClick={() => setShowIndicatorModal(true)}
@@ -135,6 +138,7 @@ export default function DashboardPage() {
                 symbol={symbol}
                 chartType={chartType}
                 settings={settings}
+                timezone={selectedTimezone}
                 ref={chartInstanceRef}
                 onVolPaneCreated={setVolPaneId}
                 isLocked={drawingState.drawingsLocked}
