@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import FontLoader from '../src/components/FontLoader';
+import ClientProviders from './ClientProviders';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,7 +32,7 @@ export default function RootLayout({
           geistSans={geistSans.variable}
           geistMono={geistMono.variable}
         />
-        {children}
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

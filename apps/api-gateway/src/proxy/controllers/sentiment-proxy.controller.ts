@@ -43,6 +43,19 @@ export class SentimentProxyController {
     });
   }
 
+  @Get('negative/today')
+  async getNegativeSentimentsToday(
+    @Query('symbol') symbol?: string,
+    @Query('threshold') threshold?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.proxyService.forward(ServiceName.SENTIMENT, {
+      method: 'GET',
+      path: '/sentiments/negative/today',
+      query: { symbol, threshold, limit },
+    });
+  }
+
   @Get(':sentimentId')
   async getSentimentById(@Param('sentimentId') sentimentId: string) {
     return this.proxyService.forward(ServiceName.SENTIMENT, {

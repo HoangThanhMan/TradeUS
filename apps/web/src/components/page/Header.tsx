@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConnectionStatus } from '../../types/trading.types';
 import { NavigationMenu } from './NavigationMenu';
+import { NotificationBell } from './NotificationBell';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { UserRole } from '@tradex/shared-types';
 import { IconLogout } from '@tabler/icons-react';
@@ -110,7 +111,7 @@ export function Header({ status }: HeaderProps) {
           </div>
 
           {/* Navigation Tabs */}
-          <NavigationMenu />
+          <NavigationMenu isVip={isVip || isAdmin} />
 
           {/* Action Button - Admin Panel / VIP Upgrade / VIP Badge */}
           {isAdmin ? (
@@ -174,6 +175,11 @@ export function Header({ status }: HeaderProps) {
           )}
 
           <div className="mx-2 h-5 w-px bg-gray-300/70" />
+
+          {/* Notification Bell */}
+          <NotificationBell />
+
+          <div className="mx-1 h-5 w-px bg-gray-300/70" />
 
           {/* User Dropdown */}
           <div className="relative" ref={dropdownRef}>

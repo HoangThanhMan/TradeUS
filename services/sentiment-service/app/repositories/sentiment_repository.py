@@ -4,7 +4,7 @@ Handles all database operations for the 'sentiments' collection.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from bson import ObjectId
@@ -186,6 +186,48 @@ class SentimentRepository:
             logger.error(f"Failed to find documents by date range: {e}")
             raise
 
+    async def find_negative_by_date(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        symbol: Optional[str] = None,
+        threshold: float = 0.0,
+        limit: int = 50
+    ) -> list[SentimentResponse]:
+        """
+        Find negative sentiment documents within a date range.
+
+        Args:
+            start_date: Start of the date range.
+            end_date: End of the date range.
+            symbol: Optional symbol filter.
+            threshold: Maximum sentiment score (exclusive). Default 0 = negative only.
+            limit: Maximum number of documents to return.
+
+        Returns:
+            List of matching negative sentiment documents.
+        """
+        try:
+            query: dict[str, Any] = {
+                "published": {
+                    "$gte": start_date,
+                    "$lte": end_date
+                },
+                "sentiment": {"$lt": threshold}
+            }
+            if symbol:
+                query["symbol"] = symbol.upper()
+
+            cursor = self.collection.find(query).sort(
+                "published", -1
+            ).limit(limit)
+
+            documents = await cursor.to_list(length=limit)
+            return [self._document_to_response(doc) for doc in documents]
+        except Exception as e:
+            logger.error(f"Failed to find negative documents by date: {e}")
+            raise
+
     async def get_average_sentiment(
         self,
         symbol: str,
@@ -280,14 +322,24 @@ class SentimentRepository:
         Returns:
             SentimentResponse: The converted response object.
         """
+        # MongoDB stores datetimes as UTC but without tzinfo.
+        # Attach UTC so Pydantic serializes with +00:00 / Z suffix,
+        # allowing JavaScript Date() to parse correctly.
+        published = doc["published"]
+        if published and not published.tzinfo:
+            published = published.replace(tzinfo=timezone.utc)
+        created_at = doc.get("created_at")
+        if created_at and not created_at.tzinfo:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+
         return SentimentResponse(
             id=str(doc["_id"]),
             title=doc["title"],
-            published=doc["published"],
+            published=published,
             link=doc["link"],
             symbol=doc["symbol"],
             sentiment=doc["sentiment"],
             emotion=doc["emotion"],
             reason=doc["reason"],
-            created_at=doc.get("created_at")
+            created_at=created_at,
         )

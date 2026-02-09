@@ -158,7 +158,7 @@ export default function AdminPage() {
         try {
           const config = JSON.parse(text);
           if (config) {
-            setQrConfig(config);
+            setQrConfig((prev) => ({ ...prev, ...config }));
           }
         } catch (parseError) {
           console.error('Error parsing QR config JSON:', parseError);
@@ -199,18 +199,30 @@ export default function AdminPage() {
 
     setIsSavingConfig(true);
     try {
+      // Only send the exact fields expected by the API DTO
+      const configPayload = {
+        bankId: qrConfig.bankId,
+        bankName: qrConfig.bankName,
+        accountNo: qrConfig.accountNo,
+        accountName: qrConfig.accountName,
+        template: qrConfig.template,
+        monthlyPrice: qrConfig.monthlyPrice,
+        yearlyPrice: qrConfig.yearlyPrice,
+      };
       const response = await fetch(`${API_URL}/admin/qr-config`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(qrConfig),
+        body: JSON.stringify(configPayload),
       });
 
       if (response.ok) {
         alert('Configuration saved successfully!');
       } else {
+        const errorData = await response.text();
+        console.error('Save config failed:', response.status, errorData);
         alert('Failed to save configuration');
       }
     } catch (err) {
@@ -513,7 +525,7 @@ export default function AdminPage() {
                       )}
                     </div>
                     <p className="text-sm font-bold text-blue-600 mt-2">
-                      {qrConfig.monthlyPrice.toLocaleString()} VND
+                      {(qrConfig.monthlyPrice ?? 0).toLocaleString()} VND
                     </p>
                   </div>
 
@@ -535,7 +547,7 @@ export default function AdminPage() {
                       )}
                     </div>
                     <p className="text-sm font-bold text-yellow-600 mt-2">
-                      {qrConfig.yearlyPrice.toLocaleString()} VND
+                      {(qrConfig.yearlyPrice ?? 0).toLocaleString()} VND
                     </p>
                   </div>
                 </div>

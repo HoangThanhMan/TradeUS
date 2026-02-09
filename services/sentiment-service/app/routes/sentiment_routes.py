@@ -104,6 +104,43 @@ async def analyze_news_sentiment(news_input: NewsInput) -> SentimentResponse:
 
 
 @router.get(
+    "/negative/today",
+    response_model=list[SentimentResponse],
+    summary="Get today's negative sentiments",
+    description="Retrieve negative sentiment analyses from today.",
+    responses={
+        200: {"description": "List of today's negative sentiments"},
+    }
+)
+async def get_negative_sentiments_today(
+    symbol: Optional[str] = Query(default=None, description="Optional symbol filter"),
+    threshold: float = Query(default=0.0, description="Max sentiment score (exclusive)"),
+    limit: int = Query(default=50, ge=1, le=200, description="Max results"),
+) -> list[SentimentResponse]:
+    """
+    Get negative sentiment analyses from today.
+
+    Returns news articles with sentiment < threshold (default 0) published today.
+    Useful for displaying historical bad news even without real-time events.
+
+    **Query Parameters:**
+    - **symbol**: Optional crypto symbol filter (e.g., BTCUSDT)
+    - **threshold**: Maximum sentiment score, exclusive (default: 0.0)
+    - **limit**: Maximum number of results (1-200, default: 50)
+    """
+    try:
+        service = get_service()
+        results = await service.get_negative_sentiments_today(symbol, threshold, limit)
+        return results
+    except Exception as e:
+        logger.error(f"Failed to get negative sentiments today: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve negative sentiments: {str(e)}"
+        )
+
+
+@router.get(
     "/{sentiment_id}",
     response_model=SentimentResponse,
     summary="Get sentiment by ID",

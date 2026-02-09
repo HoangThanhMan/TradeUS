@@ -138,6 +138,8 @@ class SentimentPublisher:
                     emotion=emotion,
                     alert_type=alert_type,
                     message=f"Extreme sentiment detected: {reason[:100]}",
+                    title=title,
+                    reason=reason,
                 )
             
             return True
@@ -153,6 +155,8 @@ class SentimentPublisher:
         emotion: str,
         alert_type: str,
         message: str,
+        title: str = "",
+        reason: str = "",
     ) -> bool:
         """
         Publish a sentiment alert (extreme sentiment detected).
@@ -163,6 +167,8 @@ class SentimentPublisher:
             emotion: Detected emotion.
             alert_type: Type of alert (extreme_negative, extreme_positive, trend_change).
             message: Alert message.
+            title: Original article title.
+            reason: Full analysis reasoning.
             
         Returns:
             True if published successfully.
@@ -180,9 +186,12 @@ class SentimentPublisher:
                 data=SentimentAlertData(
                     symbol=symbol.upper(),
                     sentiment_score=sentiment_score,
+                    sentiment=sentiment_score,
                     emotion=emotion,
                     alert_type=alert_type,
                     message=message,
+                    title=title,
+                    reason=reason,
                     threshold=settings.sentiment_alert_threshold,
                 )
             )

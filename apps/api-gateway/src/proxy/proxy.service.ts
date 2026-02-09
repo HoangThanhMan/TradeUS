@@ -16,6 +16,7 @@ export enum ServiceName {
   USER = 'userService',
   SENTIMENT = 'sentimentService',
   PREDICTION = 'predictionService',
+  SUBSCRIPTION = 'subscriptionService',
 }
 
 @Injectable()
@@ -36,6 +37,9 @@ export class ProxyService {
       )!,
       [ServiceName.PREDICTION]: this.configService.get<string>(
         'services.predictionService',
+      )!,
+      [ServiceName.SUBSCRIPTION]: this.configService.get<string>(
+        'services.subscriptionService',
       )!,
     };
   }

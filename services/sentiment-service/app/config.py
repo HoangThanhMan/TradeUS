@@ -48,10 +48,10 @@ class Settings(BaseSettings):
 
     # MongoDB configuration
     mongodb_url: str = "mongodb://localhost:27017"
-    mongodb_database: str = "tradex_sentiment"
+    mongodb_database: str = "tradex"
 
     # Google Gemini API configuration
-    gemini_api_key: str = "AIzaSyCONBjYAtgcb-u6--dR42zdA_KpxxmeaLo"
+    gemini_api_key: str = "AIzaSyBeFbeT472uFHEIrnuupVqmasVtZMoJe3s"
     gemini_model: str = "gemini-1.5-flash"
     use_mock_llm: bool = False  # Set to False to use real Gemini API
 

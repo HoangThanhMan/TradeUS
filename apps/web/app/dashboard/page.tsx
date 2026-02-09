@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWebSocket } from '../../src/hooks/useWebSocket';
 import { useChartData } from '../../src/hooks/useChartData';
@@ -22,6 +22,7 @@ import { FreeDrawingCanvas } from '../../src/components/chart-tools/FreeDrawingC
 import { SimplePriceLevelLayer } from '../../src/components/chart-tools/SimplePriceLevelLayer';
 import { FibonacciRetracementLayer } from '../../src/components/chart-tools/FibonacciRetracementLayer';
 import { ChartHeader } from '../../src/components/toolbars/ChartHeader';
+import { SubscribeButton } from '../../src/components/chart-tools/SubscribeButton';
 
 const WS_URL = process.env.NEXT_PUBLIC_PRICE_WS_URL || 'http://localhost/prices';
 
@@ -37,6 +38,19 @@ export default function DashboardPage() {
   const chartInstanceRef = useRef<any>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
+
+  // Check VIP status from sessionStorage
+  const isVip = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const userData = sessionStorage.getItem('user');
+      if (!userData) return false;
+      const user = JSON.parse(userData);
+      return user?.role === 'vip' || user?.role === 'admin' || user?.vipStatus === 'ACTIVE';
+    } catch {
+      return false;
+    }
+  }, [isAuthenticated]);
 
   const { settings, updateSettings } = useChartSettings();
 
@@ -103,7 +117,14 @@ export default function DashboardPage() {
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          <ChartHeader symbol={symbol} showChartNumber={false} onSymbolChange={setSymbol} />
+          <div className="flex items-center">
+            <div className="flex-1">
+              <ChartHeader symbol={symbol} showChartNumber={false} onSymbolChange={setSymbol} />
+            </div>
+            <div className="pr-2">
+              <SubscribeButton symbol={symbol} />
+            </div>
+          </div>
 
           <ChartToolbar
             symbol={symbol}
@@ -177,15 +198,77 @@ export default function DashboardPage() {
 
         {/* 🔥 RIGHT PANELS - Updated with Chatbot */}
         {activeRightPanel === 'sentiment' && (
-          <SentimentPanel symbol={symbol} onClose={() => setActiveRightPanel(null)} />
+          isVip ? (
+            <SentimentPanel symbol={symbol} onClose={() => setActiveRightPanel(null)} />
+          ) : (
+            <div className="w-[400px] border-l border-gray-200 bg-white flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-800">Sentiment Analysis</h3>
+                <button
+                  onClick={() => setActiveRightPanel(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-bold text-gray-800 mb-2">VIP Feature</h4>
+                <p className="text-sm text-gray-500 mb-6">
+                  Sentiment Analysis is exclusively available for VIP members. Upgrade to VIP to unlock real-time market sentiment insights.
+                </p>
+                <button
+                  onClick={() => router.push('/vip-register')}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+                >
+                  Upgrade to VIP
+                </button>
+              </div>
+            </div>
+          )
         )}
         {activeRightPanel === 'prediction' && (
-          <PredictionPanel 
-            symbol={symbol} 
-            interval="1h" 
-            currentPrice={latestPrice} 
-            onClose={() => setActiveRightPanel(null)} 
-          />
+          isVip ? (
+            <PredictionPanel 
+              symbol={symbol} 
+              interval="1h" 
+              currentPrice={latestPrice} 
+              onClose={() => setActiveRightPanel(null)} 
+            />
+          ) : (
+            <div className="w-[400px] border-l border-gray-200 bg-white flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-800">ML Prediction</h3>
+                <button
+                  onClick={() => setActiveRightPanel(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-bold text-gray-800 mb-2">VIP Feature</h4>
+                <p className="text-sm text-gray-500 mb-6">
+                  ML Prediction is exclusively available for VIP members. Upgrade to VIP to unlock AI-powered price predictions.
+                </p>
+                <button
+                  onClick={() => router.push('/vip-register')}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold text-sm hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+                >
+                  Upgrade to VIP
+                </button>
+              </div>
+            </div>
+          )
         )}
         {activeRightPanel === 'chatbot' && (
           <ChatbotPanel
@@ -195,7 +278,7 @@ export default function DashboardPage() {
           />
         )}
         
-        <RightSidebar activePanel={activeRightPanel} onPanelChange={setActiveRightPanel} />
+        <RightSidebar activePanel={activeRightPanel} onPanelChange={setActiveRightPanel} isVip={isVip} />
       </div>
 
       <IndicatorManager

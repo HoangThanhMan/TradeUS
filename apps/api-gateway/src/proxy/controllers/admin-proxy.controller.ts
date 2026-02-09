@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ProxyService, ServiceName } from '../proxy.service';
 import { JwtAuthGuard, RolesGuard, Roles, CurrentUser } from '@tradex/auth-shared';
-import { UserRole, UpdateQrConfigDto, VipPlan } from '@tradex/shared-types';
+import { UserRole, VipPlan } from '@tradex/shared-types';
 import type { IJwtPayload } from '@tradex/shared-types';
 import type { Request } from 'express';
 
@@ -33,13 +33,13 @@ export class AdminProxyController {
 
   @Put('qr-config')
   async updateQrConfig(
-    @Body() dto: UpdateQrConfigDto,
+    @Body() body: Record<string, any>,
     @Req() req: Request,
   ) {
     return this.proxyService.forward(ServiceName.USER, {
       method: 'PUT',
       path: '/admin/qr-config',
-      data: dto,
+      data: body,
       headers: req.headers as Record<string, string>,
     });
   }

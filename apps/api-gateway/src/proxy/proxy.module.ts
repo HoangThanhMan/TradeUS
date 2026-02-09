@@ -9,6 +9,7 @@ import {
 } from './controllers/sentiment-proxy.controller';
 import { PredictionProxyController } from './controllers/prediction-proxy.controller';
 import { AdminProxyController, VipProxyController } from './controllers/admin-proxy.controller';
+import { SubscriptionProxyController } from './controllers/subscription-proxy.controller';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AdminProxyController, VipProxyController } from './controllers/admin-pr
     PredictionProxyController,
     AdminProxyController,
     VipProxyController,
+    SubscriptionProxyController,
   ],
   providers: [
     ProxyService,
