@@ -78,7 +78,7 @@ export class BinanceKlineClient {
         this.ws = new WebSocket(this.baseUrl);
 
         this.ws.on('open', () => {
-          logger.info('✅ WebSocket connected, subscribing to kline streams...');
+          logger.info('WebSocket connected, subscribing to kline streams...');
           
           // Subscribe to all streams
           const subscribeMessage = {
@@ -89,7 +89,7 @@ export class BinanceKlineClient {
 
           this.ws!.send(JSON.stringify(subscribeMessage));
           
-          logger.info({ streams }, '✅ Subscribed to kline streams');
+          logger.info({ streams }, 'Subscribed to kline streams');
           resolve();
         });
 

@@ -693,7 +693,7 @@ export default function AuthPage() {
 
         {/* Brand Header */}
         <div className="brand-header">
-          <div className="brand-logo">TradeX</div>
+          <div className="brand-logo">USTrading</div>
         </div>
 
         <div className="content-wrapper">

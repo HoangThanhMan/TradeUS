@@ -75,10 +75,11 @@ export function Header({ status }: HeaderProps) {
             className="font-semibold tracking-tight cursor-pointer"
             onClick={() => router.push('/dashboard')}
           >
-            <span className="text-gray-900 text-2xl">Trade</span>
-            <span className="bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent font-bold text-3xl">
-              X
+            <span className="bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent font-bold text-2xl">
+              US
             </span>
+            <span className="text-gray-900 text-2xl">Trading</span>
+            
           </div>
         </div>
 

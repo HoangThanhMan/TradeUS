@@ -12,7 +12,7 @@ import { Sidebar } from '../../src/components/toolbars/LeftSidebar';
 import { RightSidebar, RightPanelType } from '../../src/components/page/RightSidebar';
 import { SentimentPanel } from '../../src/components/page/SentimentPanel';
 import { PredictionPanel } from '../../src/components/page/PredictionPanel';
-import { ChatbotPanel } from '../../src/components/page/ChatbotPanel'; // 🔥 NEW
+import { ChatbotPanel } from '../../src/components/page/ChatbotPanel';
 import { ChartToolbar } from '../../src/components/toolbars/ChartToolbar';
 import { InfoBar } from '../../src/components/toolbars/InfoBar';
 import { KLineChart } from '../../src/components/chart-tools/KLineChart';
