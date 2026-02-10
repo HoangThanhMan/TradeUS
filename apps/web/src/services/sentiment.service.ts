@@ -196,4 +196,27 @@ export const sentimentService = {
       throw error.response ? error.response.data : error;
     }
   },
+
+  /**
+   * Get today's negative sentiment analyses
+   * @param symbol - Optional crypto symbol filter
+   * @param threshold - Maximum sentiment score (exclusive, default 0)
+   * @param limit - Maximum number of results
+   */
+  getNegativeSentimentsToday: async (
+    symbol?: string,
+    threshold: number = 0,
+    limit: number = 50,
+  ): Promise<SentimentApiResponse[]> => {
+    return handleApiCall(async () => {
+      const response = await axios.get(
+        `${API_URL}/sentiments/negative/today`,
+        {
+          ...getAuthHeaders(),
+          params: { symbol, threshold, limit },
+        },
+      );
+      return response.data;
+    });
+  },
 };

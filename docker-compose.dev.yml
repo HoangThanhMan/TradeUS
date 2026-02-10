@@ -164,6 +164,89 @@ services:
       - tradex-network
 
   # =============================================================================
+  # Email & Alert Services (Python)
+  # =============================================================================
+
+  email-service:
+    build:
+      context: ./services/email-service
+      dockerfile: Dockerfile
+    container_name: tradex-email-service
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    environment:
+      ENVIRONMENT: development
+      PORT: 8003
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      EMAIL_STRATEGY: console
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8003/health').raise_for_status()"]
+      interval: 30s
+      retries: 3
+    networks:
+      - tradex-network
+
+  symbol-alert-service:
+    build:
+      context: ./services/symbol-alert-service
+      dockerfile: Dockerfile
+    container_name: tradex-symbol-alert-service
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      ENVIRONMENT: development
+      PORT: 8004
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
+      ALERT_COOLDOWN_SECONDS: 300
+      SUBSCRIPTION_SERVICE_URL: http://symbol-subscription-service:8005
+      EMAIL_EXCHANGE: email.exchange
+      EMAIL_ROUTING_KEY: email.send.alert
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      email-service:
+        condition: service_healthy
+      symbol-subscription-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8004/health').raise_for_status()"]
+      interval: 30s
+      retries: 3
+    networks:
+      - tradex-network
+
+  symbol-subscription-service:
+    build:
+      context: ./services/symbol-subscription-service
+      dockerfile: Dockerfile
+    container_name: tradex-symbol-subscription-service
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      ENVIRONMENT: development
+      PORT: 8005
+      MONGODB_URL: mongodb://admin:password@mongodb:27017/tradex_subscriptions?authSource=admin
+      MONGODB_DATABASE: tradex_subscriptions
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8005/health').raise_for_status()"]
+      interval: 30s
+      retries: 3
+    networks:
+      - tradex-network
+
+  # =============================================================================
   # Backend Services
   # =============================================================================
 
@@ -180,6 +263,7 @@ services:
       USER_SERVICE_URL: http://user-service:3010
       SENTIMENT_SERVICE_URL: http://sentiment-service:8001
       PREDICTION_SERVICE_URL: http://prediction-service:8002
+      SUBSCRIPTION_SERVICE_URL: http://symbol-subscription-service:8005
     depends_on:
       mongodb:
         condition: service_healthy
@@ -229,6 +313,9 @@ services:
       RABBITMQ_EXCHANGE_TYPE: topic
       RABBITMQ_QUEUE_PREFIX: ws-gateway
       RABBITMQ_ROUTING_PATTERNS: price.#
+      ALERT_EXCHANGE: alert.exchange
+      ALERT_QUEUE_PREFIX: ws-gateway.alert
+      ALERT_ROUTING_PATTERNS: alert.notification.#,alert.email.#
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -255,6 +342,9 @@ services:
       RABBITMQ_EXCHANGE_TYPE: topic
       RABBITMQ_QUEUE_PREFIX: ws-gateway
       RABBITMQ_ROUTING_PATTERNS: price.#
+      ALERT_EXCHANGE: alert.exchange
+      ALERT_QUEUE_PREFIX: ws-gateway.alert
+      ALERT_ROUTING_PATTERNS: alert.notification.#,alert.email.#
     depends_on:
       rabbitmq:
         condition: service_healthy

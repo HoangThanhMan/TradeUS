@@ -8,11 +8,13 @@ export type RightPanelType = 'sentiment' | 'prediction' | 'chatbot' | null;
 interface RightSidebarProps {
   activePanel: RightPanelType;
   onPanelChange: (panel: RightPanelType) => void;
+  isVip?: boolean;
 }
 
 export function RightSidebar({
   activePanel,
   onPanelChange,
+  isVip = false,
 }: RightSidebarProps) {
   const handlePanelClick = (panel: RightPanelType) => {
     if (activePanel === panel) {
@@ -27,13 +29,22 @@ export function RightSidebar({
       {/* Sentiment Analysis Icon */}
       <button
         onClick={() => handlePanelClick('sentiment')}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-200 ${
+        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-200 relative ${
           activePanel === 'sentiment'
             ? 'bg-green-500 text-white shadow-md'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-green-600'
+            : isVip
+              ? 'text-gray-600 hover:bg-gray-100 hover:text-green-600'
+              : 'text-gray-400 hover:bg-gray-100 hover:text-amber-600'
         }`}
-        title="Sentiment News"
+        title={isVip ? 'Sentiment News' : 'Sentiment News (VIP Only)'}
       >
+        {!isVip && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+          </span>
+        )}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5"
@@ -53,13 +64,22 @@ export function RightSidebar({
       {/* ML Prediction Icon */}
       <button
         onClick={() => handlePanelClick('prediction')}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-200 ${
+        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-200 relative ${
           activePanel === 'prediction'
             ? 'bg-red-500 text-white shadow-md'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-red-600'
+            : isVip
+              ? 'text-gray-600 hover:bg-gray-100 hover:text-red-600'
+              : 'text-gray-400 hover:bg-gray-100 hover:text-amber-600'
         }`}
-        title="ML Prediction"
+        title={isVip ? 'ML Prediction' : 'ML Prediction (VIP Only)'}
       >
+        {!isVip && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+          </span>
+        )}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5"

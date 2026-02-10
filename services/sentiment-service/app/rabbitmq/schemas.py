@@ -84,9 +84,12 @@ class SentimentAlertData(BaseModel):
     
     symbol: str = Field(..., description="Crypto symbol")
     sentiment_score: float = Field(..., description="Sentiment score that triggered alert")
+    sentiment: float = Field(0, description="Sentiment score (alias for compatibility)")
     emotion: str = Field(..., description="Detected emotion")
     alert_type: str = Field(..., description="Alert type: extreme_positive, extreme_negative, trend_change")
     message: str = Field(..., description="Alert message")
+    title: str = Field("", description="Original article title")
+    reason: str = Field("", description="Analysis reasoning")
     threshold: float = Field(..., description="Threshold that was exceeded")
 
 

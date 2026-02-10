@@ -28,17 +28,25 @@ export class AdminService {
   }
 
   async updateQrConfig(dto: UpdateQrConfigDto): Promise<QrConfigDocument> {
-    // Deactivate all existing configs
-    await this.qrConfigModel.updateMany({}, { isActive: false });
+    // Upsert: update existing active config or create a new one
+    const config = await this.qrConfigModel.findOneAndUpdate(
+      { isActive: true },
+      {
+        $set: {
+          bankId: dto.bankId,
+          bankName: dto.bankName,
+          accountNo: dto.accountNo,
+          accountName: dto.accountName,
+          template: dto.template || 'compact2',
+          monthlyPrice: dto.monthlyPrice,
+          yearlyPrice: dto.yearlyPrice,
+          isActive: true,
+        },
+      },
+      { new: true, upsert: true },
+    ).exec();
 
-    // Create new active config
-    const config = new this.qrConfigModel({
-      ...dto,
-      template: dto.template || 'compact2',
-      isActive: true,
-    });
-
-    return config.save();
+    return config;
   }
 
   // =================== VIP Requests ===================

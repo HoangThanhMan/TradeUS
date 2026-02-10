@@ -93,6 +93,12 @@ export class UsersController {
   }
 
   // --- INTERNAL ENDPOINTS (Giữ nguyên) ---
+  // Lấy user theo ID (Internal - không cần JWT, cho service-to-service)
+  @Get('internal/:id')
+  findOneInternal(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
   @Get('internal/by-email/:email')
   findByEmailInternal(@Param('email') email: string) {
     return this.usersService.findByEmailWithPassword(email);

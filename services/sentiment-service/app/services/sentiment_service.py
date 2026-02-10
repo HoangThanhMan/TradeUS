@@ -498,3 +498,32 @@ class SentimentService:
             Dictionary with average sentiment statistics.
         """
         return await self.repository.get_average_sentiment(symbol, days)
+
+    async def get_negative_sentiments_today(
+        self,
+        symbol: Optional[str] = None,
+        threshold: float = 0.0,
+        limit: int = 50
+    ) -> list[SentimentResponse]:
+        """
+        Get today's negative sentiment analyses.
+
+        Args:
+            symbol: Optional symbol filter.
+            threshold: Maximum sentiment score (exclusive). Default 0.
+            limit: Maximum results to return.
+
+        Returns:
+            List of negative sentiment responses from today.
+        """
+        from datetime import timezone
+
+        now = datetime.now(timezone.utc)
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return await self.repository.find_negative_by_date(
+            start_date=start_of_day,
+            end_date=now,
+            symbol=symbol,
+            threshold=threshold,
+            limit=limit,
+        )

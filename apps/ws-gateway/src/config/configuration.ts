@@ -24,6 +24,15 @@ export default () => ({
     // Sentiment service API URL for fetching historical data
     serviceUrl: process.env.SENTIMENT_SERVICE_URL || 'http://localhost:8001',
   },
+
+  // Alert / Email notification RabbitMQ configuration
+  alert: {
+    exchange: process.env.ALERT_EXCHANGE || 'alert.exchange',
+    queuePrefix: process.env.ALERT_QUEUE_PREFIX || 'ws-gateway.alert',
+    routingPatterns: (process.env.ALERT_ROUTING_PATTERNS || 'alert.notification.#,alert.email.#')
+      .replace(/^["']|["']$/g, '')
+      .split(','),
+  },
   
   cors: {
     origins: (process.env.CORS_ORIGINS || 'http://localhost:3000').split(','),
