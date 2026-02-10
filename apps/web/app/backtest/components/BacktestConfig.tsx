@@ -1,4 +1,4 @@
-// app/backtest/components/BacktestConfig.tsx - UPDATED WITH BETTER DEFAULTS
+// app/backtest/components/BacktestConfig.tsx - WITH SPLIT PARTS INPUT
 'use client';
 
 import React, { useState } from 'react';
@@ -6,6 +6,8 @@ import { BacktestSymbolDropdown } from './BacktestSymbolDropdown';
 import {
   STRATEGY_TEMPLATES,
   BacktestConfig as ConfigType,
+  StrategyCondition,
+  DEFAULT_STRATEGY_CONDITION,
 } from '../../../src/types/backtest.types';
 import { StrategyBuilder } from './StrategyBuilder';
 import { Plus_Jakarta_Sans } from 'next/font/google';
@@ -14,6 +16,8 @@ import {
   IconBolt,
   IconTarget,
   IconChartBar,
+  IconChevronDown,
+  IconChevronUp,
 } from '@tabler/icons-react';
 
 const pjs = Plus_Jakarta_Sans({
@@ -37,23 +41,72 @@ const INTERVALS = [
 ];
 
 export function BacktestConfig({ onRun, isRunning }: Props) {
-  // 🔥 UPDATED DEFAULT VALUES - More realistic and generates more signals
+  // State
   const [symbol, setSymbol] = useState('BTCUSDT');
-  const [interval, setInterval] = useState('1h'); // Changed from '1d' to '1h'
-  const [startDate, setStartDate] = useState('01/01/2024'); // Changed to 1 year
-  const [endDate, setEndDate] = useState('01/01/2025');
-  const [capital, setCapital] = useState(10000); // Same
-  const [lots, setLots] = useState(1); // Same
-  const [stopLoss, setStopLoss] = useState(3); // Changed from 2 to 3%
-  const [takeProfit, setTakeProfit] = useState(6); // Changed from 2 to 6% (1:2 ratio)
+  const [interval, setInterval] = useState('1h');
+  const [startDate, setStartDate] = useState('10/02/2025');
+  const [endDate, setEndDate] = useState('10/02/2026');
+  const [capital, setCapital] = useState(10000);
+  const [lots, setLots] = useState(1);
+  const [stopLoss, setStopLoss] = useState(3);
+  const [takeProfit, setTakeProfit] = useState(6);
   const [strategyType, setStrategyType] = useState<'template' | 'custom'>(
     'template',
   );
   const [selectedTemplate, setSelectedTemplate] = useState('ma_cross');
+
+  // 🔥 THAY ĐỔI: Dùng state để toggle hiển thị thêm templates
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
+
   const [splitCapital, setSplitCapital] = useState(false);
+  const [splitParts, setSplitParts] = useState(2); // 🔥 NEW: Number of parts to split
   const [useAI, setUseAI] = useState(false);
 
+  // 🔥 NEW: Track custom conditions from StrategyBuilder
+  const [customConditions, setCustomConditions] = useState<StrategyCondition[]>(
+    [
+      {
+        ...DEFAULT_STRATEGY_CONDITION,
+        id: '1',
+        indicator1Color: '#F97316',
+        indicator2Color: '#3B82F6',
+      },
+    ],
+  );
+
+  // First 6 templates (shown by default)
+  const defaultTemplates = STRATEGY_TEMPLATES.slice(0, 6);
+  // Additional 7 templates (shown when expanded)
+  const additionalTemplates = STRATEGY_TEMPLATES.slice(6);
+
+  // All templates to display based on showAllTemplates state
+  const displayedTemplates = showAllTemplates
+    ? STRATEGY_TEMPLATES
+    : defaultTemplates;
+
   const handleRun = () => {
+    // 🔥 FIX: Get conditions from template OR custom
+    let strategyConditions: StrategyCondition[] | undefined;
+    let strategyName = 'Custom Strategy';
+
+    if (strategyType === 'template') {
+      const template = STRATEGY_TEMPLATES.find(
+        (t) => t.id === selectedTemplate,
+      );
+      if (template) {
+        // Deep clone conditions to preserve colors
+        strategyConditions = template.conditions.map((c) => ({
+          ...c,
+          id: c.id || Date.now().toString(),
+          indicator1Color: c.indicator1Color || '#F97316',
+          indicator2Color: c.indicator2Color || '#3B82F6',
+        }));
+        strategyName = template.name;
+      }
+    } else {
+      strategyConditions = customConditions;
+    }
+
     const config: ConfigType = {
       symbol,
       interval,
@@ -65,20 +118,20 @@ export function BacktestConfig({ onRun, isRunning }: Props) {
       takeProfit,
       strategy: {
         type: strategyType,
-        name:
-          strategyType === 'template'
-            ? STRATEGY_TEMPLATES.find((t) => t.id === selectedTemplate)?.name ||
-              'Moving Average Cross'
-            : 'Custom Strategy',
+        name: strategyName,
         templateId: strategyType === 'template' ? selectedTemplate : undefined,
-        conditions: strategyType === 'custom' ? [] : undefined,
+        conditions: strategyConditions, // ✅ Pass conditions for BOTH template and custom
       },
       advancedOptions: {
         splitCapital,
+        splitParts: splitCapital ? splitParts : undefined,
         useAIPrediction: useAI,
         aiModelId: null,
       },
     };
+
+    console.log('🚀 Running backtest with config:', config);
+    console.log('📋 Strategy conditions:', strategyConditions);
 
     onRun(config);
   };
@@ -233,68 +286,89 @@ export function BacktestConfig({ onRun, isRunning }: Props) {
           </div>
 
           {strategyType === 'template' ? (
-            // Strategy Templates Grid
-            <div className="grid grid-cols-6 gap-3 mb-6">
-              {STRATEGY_TEMPLATES.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setSelectedTemplate(template.id)}
-                  className={`relative p-3 rounded border text-left flex flex-col items-start transition-all ${
-                    selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {template.category === 'trend' && (
-                      <IconChartLine size={21} className="text-blue-600" />
-                    )}
-                    {template.category === 'momentum' && (
-                      <IconBolt size={21} className="text-purple-600" />
-                    )}
+            <>
+              {/* Strategy Templates Grid */}
+              <div className="grid grid-cols-6 gap-3 mb-4">
+                {displayedTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                    className={`relative p-3 rounded border text-left flex flex-col items-start transition-all ${
+                      selectedTemplate === template.id
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500/30'
+                        : 'border-gray-300 bg-white hover:border-gray-400 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {template.category === 'trend' && (
+                        <IconChartLine size={21} className="text-blue-600" />
+                      )}
+                      {template.category === 'momentum' && (
+                        <IconBolt size={21} className="text-purple-600" />
+                      )}
+                      {template.category === 'volatility' && (
+                        <IconTarget size={21} className="text-yellow-600" />
+                      )}
+                      {template.category === 'volume' && (
+                        <IconChartBar size={21} className="text-green-600" />
+                      )}
+                      <span
+                        className={`px-2 py-0.5 text-xs rounded ${
+                          template.category === 'trend'
+                            ? 'bg-blue-100 text-blue-700'
+                            : template.category === 'momentum'
+                              ? 'bg-purple-100 text-purple-700'
+                              : template.category === 'volatility'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {template.category}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                      {template.name}
+                    </p>
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {template.description}
+                    </p>
+                  </button>
+                ))}
 
-                    {template.category === 'volatility' && (
-                      <IconTarget size={21} className="text-yellow-600" />
-                    )}
+                {/* Show More/Less Button - Chỉ hiển thị nếu chưa hiển thị tất cả */}
+                {!showAllTemplates && (
+                  <button
+                    onClick={() => setShowAllTemplates(true)}
+                    className="p-3 rounded border-2 border-dashed border-gray-300 text-center text-gray-500 hover:border-blue-500 hover:text-blue-500 transition-all flex flex-col items-center justify-center"
+                  >
+                    <IconChevronDown size={24} className="mb-1" />
+                    <div className="text-xs">
+                      More Templates
+                      <br />({additionalTemplates.length} more)
+                    </div>
+                  </button>
+                )}
+              </div>
 
-                    {template.category === 'volume' && (
-                      <IconChartBar size={21} className="text-green-600" />
-                    )}
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded ${
-                        template.category === 'trend'
-                          ? 'bg-blue-100 text-blue-700'
-                          : template.category === 'momentum'
-                            ? 'bg-purple-100 text-purple-700'
-                            : template.category === 'volatility'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {template.category}
-                    </span>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-900 mb-1">
-                    {template.name}
-                  </p>
-                  <p className="text-xs text-gray-500 line-clamp-2">
-                    {template.description}
-                  </p>
-                </button>
-              ))}
-
-              {/* More Templates Button */}
-              <button className="p-3 rounded border-2 border-dashed border-gray-300 text-center text-gray-500 hover:border-blue-500 hover:text-blue-500 transition-all">
-                <div className="text-2xl mb-1">+</div>
-                <div className="text-xs">
-                  More Templates
-                  <br />
-                  (7 additional)
+              {/* Show Less Button - Hiển thị khi đang show all */}
+              {showAllTemplates && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={() => setShowAllTemplates(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <IconChevronUp size={16} />
+                    Show Less Templates
+                  </button>
                 </div>
-              </button>
-            </div>
+              )}
+            </>
           ) : (
-            <StrategyBuilder />
+            // 🔥 CRITICAL: Pass conditions state to StrategyBuilder
+            <StrategyBuilder
+              conditions={customConditions}
+              onConditionsChange={setCustomConditions}
+            />
           )}
 
           {/* Tab Buttons - Moved to bottom */}
@@ -327,15 +401,35 @@ export function BacktestConfig({ onRun, isRunning }: Props) {
               Advanced Options
             </h4>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={splitCapital}
-                  onChange={(e) => setSplitCapital(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                Split capital into multiple entries
-              </label>
+              {/* 🔥 UPDATED: Split Capital with number input */}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={splitCapital}
+                    onChange={(e) => setSplitCapital(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Split capital
+                </label>
+                {splitCapital && (
+                  <span className="text-sm text-gray-700">into</span>
+                )}
+                {splitCapital && (
+                  <input
+                    type="number"
+                    min="2"
+                    max="10"
+                    value={splitParts}
+                    onChange={(e) => setSplitParts(Number(e.target.value))}
+                    className="w-16 bg-white border border-gray-300 rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:border-blue-500"
+                  />
+                )}
+                {splitCapital && (
+                  <span className="text-sm text-gray-700">parts</span>
+                )}
+              </div>
+
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"

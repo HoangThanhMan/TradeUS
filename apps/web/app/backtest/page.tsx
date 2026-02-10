@@ -152,7 +152,7 @@ export default function BacktestPage() {
                 <div
                   className={`w-2 h-2 rounded-full ${result.summary.totalPnL > 0 ? 'bg-green-500' : 'bg-red-500'}`}
                 ></div>
-                <span className="text-gray-600">
+                <span className="text-gray-600 text-[12px] font-semibold">
                   {result.summary.totalTrades} trades
                 </span>
               </div>

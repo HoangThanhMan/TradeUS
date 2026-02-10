@@ -1,4 +1,4 @@
-// src/components/chart/BacktestArrowLayer.tsx
+// src/components/chart/BacktestArrowLayer.tsx - SMALLER LABELS
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -13,9 +13,9 @@ export interface ArrowSignal {
   timestamp: number;
   price: number;
   type: 'BUY' | 'SELL';
-  exitReason?: string; // 'take_profit' | 'stop_loss' | 'strategy' | undefined
-  candleLow?: number; // Thêm low của cây nến
-  candleHigh?: number; // Thêm high của cây nến
+  exitReason?: string;
+  candleLow?: number;
+  candleHigh?: number;
 }
 
 interface BacktestArrowLayerProps {
@@ -33,10 +33,10 @@ export function BacktestArrowLayer({
 }: BacktestArrowLayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [, forceUpdate] = useState(0);
   const rafIdRef = useRef<number | null>(null);
-  const isUpdatingRef = useRef(false);
+  const [renderKey, setRenderKey] = useState(0);
 
+  // 🔥 Optimized dimension update
   const updateDimensions = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -44,23 +44,19 @@ export function BacktestArrowLayer({
     }
   }, []);
 
-  // Smooth update using RAF
+  // 🔥 Schedule re-render using RAF
   const scheduleUpdate = useCallback(() => {
-    if (isUpdatingRef.current) return;
-
-    isUpdatingRef.current = true;
-
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
     }
 
     rafIdRef.current = requestAnimationFrame(() => {
-      forceUpdate((prev) => prev + 1);
-      isUpdatingRef.current = false;
+      setRenderKey((prev) => prev + 1);
       rafIdRef.current = null;
     });
   }, []);
 
+  // Setup resize observer
   useEffect(() => {
     updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
@@ -70,27 +66,34 @@ export function BacktestArrowLayer({
     return () => resizeObserver.disconnect();
   }, [updateDimensions]);
 
-  // Listen to chart pan/zoom events with smooth updates
+  // 🔥 Listen to ALL chart events for smooth updates
   useEffect(() => {
     if (!chartInstance) return;
 
     try {
-      // Subscribe to chart pan and zoom events
-      chartInstance.subscribeAction('onScroll', scheduleUpdate);
-      chartInstance.subscribeAction('onZoom', scheduleUpdate);
-      chartInstance.subscribeAction('onVisibleRangeChange', scheduleUpdate);
+      const events = [
+        'onScroll',
+        'onZoom',
+        'onVisibleRangeChange',
+        'onCrosshairChange',
+        'onPaneDrag',
+      ];
+
+      events.forEach((event) => {
+        chartInstance.subscribeAction(event, scheduleUpdate);
+      });
+
+      // Initial render
+      scheduleUpdate();
 
       return () => {
         try {
           if (rafIdRef.current !== null) {
             cancelAnimationFrame(rafIdRef.current);
           }
-          chartInstance.unsubscribeAction('onScroll', scheduleUpdate);
-          chartInstance.unsubscribeAction('onZoom', scheduleUpdate);
-          chartInstance.unsubscribeAction(
-            'onVisibleRangeChange',
-            scheduleUpdate,
-          );
+          events.forEach((event) => {
+            chartInstance.unsubscribeAction(event, scheduleUpdate);
+          });
         } catch (e) {
           console.warn('Failed to unsubscribe chart events:', e);
         }
@@ -100,51 +103,54 @@ export function BacktestArrowLayer({
     }
   }, [chartInstance, scheduleUpdate]);
 
-  // Convert price to Y coordinate
-  const priceToY = (price: number): number | null => {
-    if (!chartInstance) return null;
-    try {
-      if (typeof chartInstance.convertToPixel === 'function') {
-        const result = chartInstance.convertToPixel(
-          { value: price },
-          { paneId: 'candle_pane' },
-        );
-        if (result && typeof result.y === 'number') {
-          return result.y;
+  // 🔥 Convert price to Y coordinate
+  const priceToY = useCallback(
+    (price: number): number | null => {
+      if (!chartInstance) return null;
+      try {
+        if (typeof chartInstance.convertToPixel === 'function') {
+          const result = chartInstance.convertToPixel(
+            { value: price },
+            { paneId: 'candle_pane' },
+          );
+          if (result && typeof result.y === 'number') {
+            return result.y;
+          }
         }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      console.warn('convertToPixel failed:', e);
-      return null;
-    }
-  };
+    },
+    [chartInstance],
+  );
 
-  // Convert timestamp to X coordinate
-  const timestampToX = (timestamp: number): number | null => {
-    if (!chartInstance) return null;
-    try {
-      if (typeof chartInstance.convertToPixel === 'function') {
-        const result = chartInstance.convertToPixel(
-          { timestamp },
-          { paneId: 'candle_pane' },
-        );
-        if (result && typeof result.x === 'number') {
-          return result.x;
+  // 🔥 Convert timestamp to X coordinate
+  const timestampToX = useCallback(
+    (timestamp: number): number | null => {
+      if (!chartInstance) return null;
+      try {
+        if (typeof chartInstance.convertToPixel === 'function') {
+          const result = chartInstance.convertToPixel(
+            { timestamp },
+            { paneId: 'candle_pane' },
+          );
+          if (result && typeof result.x === 'number') {
+            return result.x;
+          }
         }
+        return null;
+      } catch (e) {
+        return null;
       }
-      return null;
-    } catch (e) {
-      console.warn('convertToPixel failed:', e);
-      return null;
-    }
-  };
+    },
+    [chartInstance],
+  );
 
-  // Calculate arrow offset from candle
-  const ARROW_OFFSET = 15; // pixels from candle high/low
-  const LABEL_OFFSET = 8; // pixels from arrow
+  const ARROW_OFFSET = 15;
+  const LABEL_OFFSET = 6; // Reduced from 8
 
-  const renderArrows = () => {
+  const renderArrows = useCallback(() => {
     if (!drawingsVisible || !chartInstance) return null;
 
     const allSignals: Array<{
@@ -159,7 +165,6 @@ export function BacktestArrowLayer({
       const { signal, isBuy } = item;
       const x = timestampToX(signal.timestamp);
 
-      // XÁC ĐỊNH LOẠI SIGNAL VÀ CÁCH XỬ LÝ
       const exitReason = signal.exitReason;
       const isTakeProfit = exitReason === 'take_profit' || exitReason === 'tp';
       const isStopLoss = exitReason === 'stop_loss' || exitReason === 'sl';
@@ -167,28 +172,26 @@ export function BacktestArrowLayer({
 
       let referencePrice: number;
 
+      // Xác định referencePrice
       if (isBuy) {
-        // BUY: dùng candleLow
-        if (signal.candleLow !== undefined) {
-          referencePrice = signal.candleLow;
-        } else {
-          referencePrice = signal.price * 0.99;
-        }
+        // Tín hiệu BUY: đặt mũi tên ở dưới nến
+        referencePrice =
+          signal.candleLow !== undefined
+            ? signal.candleLow
+            : signal.price * 0.99;
       } else {
-        // TẤT CẢ CÁC LOẠI SELL đều dùng candleHigh
-        // Bao gồm: TP, SL, STRATEGY EXIT, default SELL
-        if (signal.candleHigh !== undefined) {
-          referencePrice = signal.candleHigh;
-        } else {
-          referencePrice = signal.price * 1.01;
-        }
+        // Tất cả SELL/EXIT: đặt mũi tên ở trên nến
+        referencePrice =
+          signal.candleHigh !== undefined
+            ? signal.candleHigh
+            : signal.price * 1.01;
       }
 
       const y = priceToY(referencePrice);
 
       if (x === null || y === null) return null;
 
-      // Xác định arrow config
+      // Determine arrow configuration
       let arrowConfig = {
         pointsUp: true,
         arrowY: 0,
@@ -199,28 +202,27 @@ export function BacktestArrowLayer({
       };
 
       if (isBuy) {
-        // BUY: Arrow UP từ dưới lên
+        // BUY arrow: points up, below candle
         arrowConfig = {
           pointsUp: true,
           arrowY: y + ARROW_OFFSET,
-          labelY: y + ARROW_OFFSET + LABEL_OFFSET + 20,
+          labelY: y + ARROW_OFFSET + LABEL_OFFSET + 16, // Reduced from 20
           arrowColor: '#22C55E',
           textColor: '#16A34A',
           label: 'BUY',
         };
       } else if (isTakeProfit) {
-        // TAKE PROFIT: Arrow DOWN từ trên xuống
+        // TP: giữ nguyên màu xanh lá đậm
         arrowConfig = {
           pointsUp: false,
           arrowY: y - ARROW_OFFSET - 10,
-          labelY: y - ARROW_OFFSET - LABEL_OFFSET - 10,
+          labelY: y - ARROW_OFFSET - LABEL_OFFSET - 8, // Reduced from 10
           arrowColor: '#10B981',
           textColor: '#059669',
           label: 'TP',
         };
       } else if (isStopLoss) {
-        // STOP LOSS: Arrow UP từ dưới lên (như BUY)
-        // Vị trí: dùng candleLow vì SL là stop loss ở phía dưới
+        // SL: giữ nguyên màu đỏ đậm
         const slReferencePrice =
           signal.candleLow !== undefined
             ? signal.candleLow
@@ -232,36 +234,27 @@ export function BacktestArrowLayer({
         arrowConfig = {
           pointsUp: true,
           arrowY: slY + ARROW_OFFSET,
-          labelY: slY + ARROW_OFFSET + LABEL_OFFSET + 20,
+          labelY: slY + ARROW_OFFSET + LABEL_OFFSET + 16, // Reduced from 20
           arrowColor: '#DC2626',
           textColor: '#991B1B',
           label: 'SL',
         };
       } else if (isStrategyExit) {
-        // STRATEGY EXIT: Arrow UP từ dưới lên (như BUY)
-        // Vị trí: dùng candleLow vì strategy exit thường ở dưới
-        const exitReferencePrice =
-          signal.candleLow !== undefined
-            ? signal.candleLow
-            : signal.price * 0.99;
-        const exitY = priceToY(exitReferencePrice);
-
-        if (exitY === null) return null;
-
+        // EXIT strategy -> SELL màu đỏ
         arrowConfig = {
           pointsUp: false,
-          arrowY: exitY - ARROW_OFFSET - 10,
-          labelY: exitY - ARROW_OFFSET - LABEL_OFFSET - 10,
-          arrowColor: '#F97316',
-          textColor: '#EA580C',
-          label: 'EXIT',
+          arrowY: y - ARROW_OFFSET - 10,
+          labelY: y - ARROW_OFFSET - LABEL_OFFSET - 8, // Reduced from 10
+          arrowColor: '#EF4444',
+          textColor: '#DC2626',
+          label: 'SELL',
         };
       } else {
-        // Default SELL: Arrow DOWN từ trên xuống
+        // SELL thông thường
         arrowConfig = {
           pointsUp: false,
           arrowY: y - ARROW_OFFSET,
-          labelY: y - ARROW_OFFSET - LABEL_OFFSET - 20,
+          labelY: y - ARROW_OFFSET - LABEL_OFFSET - 16, // Reduced from 20
           arrowColor: '#EF4444',
           textColor: '#DC2626',
           label: 'SELL',
@@ -270,35 +263,35 @@ export function BacktestArrowLayer({
 
       return (
         <div
-          key={`${signal.timestamp}-${index}`}
-          className="absolute pointer-events-none transition-all duration-75 ease-out"
+          key={`${signal.timestamp}-${index}-${renderKey}`}
+          className="absolute pointer-events-none"
           style={{
             left: `${x}px`,
             top: `${arrowConfig.arrowY}px`,
             transform: 'translate(-50%, -50%)',
-            willChange: 'left, top',
+            transition: 'none',
           }}
         >
-          {/* Arrow Triangle */}
+          {/* Arrow Triangle - SMALLER */}
           <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
+            width="12" // Reduced from 16
+            height="12" // Reduced from 16
+            viewBox="0 0 12 12" // Reduced from 16
             className="absolute left-1/2 -translate-x-1/2"
             style={{
-              top: arrowConfig.pointsUp ? '-8px' : '0px',
+              top: arrowConfig.pointsUp ? '-6px' : '0px', // Adjusted from -8px
             }}
           >
             {arrowConfig.pointsUp ? (
               <polygon
-                points="8,0 0,16 16,16"
+                points="6,0 0,12 12,12" // Adjusted from 8,0 0,16 16,16
                 fill={arrowConfig.arrowColor}
                 stroke={arrowConfig.arrowColor}
                 strokeWidth="1"
               />
             ) : (
               <polygon
-                points="0,0 16,0 8,16"
+                points="0,0 12,0 6,12" // Adjusted from 0,0 16,0 8,16
                 fill={arrowConfig.arrowColor}
                 stroke={arrowConfig.arrowColor}
                 strokeWidth="1"
@@ -306,17 +299,15 @@ export function BacktestArrowLayer({
             )}
           </svg>
 
-          {/* Label */}
+          {/* Label - SMALLER */}
           <div
             className={`absolute left-1/2 -translate-x-1/2 whitespace-nowrap ${pjs.className}`}
             style={{
-              top: arrowConfig.pointsUp
-                ? '16px' // Below arrow
-                : '-36px', // Above arrow
+              top: arrowConfig.pointsUp ? '12px' : '-28px', // Adjusted from 16px/-36px
             }}
           >
             <div
-              className="px-2 py-1 rounded text-[10px] font-bold shadow-md"
+              className="px-1.5 py-0.5 rounded text-[8px] font-bold shadow-sm" // Reduced padding and font
               style={{
                 backgroundColor: '#F3F4F6',
                 color: arrowConfig.textColor,
@@ -329,7 +320,15 @@ export function BacktestArrowLayer({
         </div>
       );
     });
-  };
+  }, [
+    drawingsVisible,
+    chartInstance,
+    buySignals,
+    sellSignals,
+    timestampToX,
+    priceToY,
+    renderKey,
+  ]);
 
   return (
     <div

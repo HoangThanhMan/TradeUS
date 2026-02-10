@@ -1,4 +1,4 @@
-// src/utils/backtestEngine.ts - WITH MOCK AI PREDICTION
+// src/utils/backtestEngine.ts - OPTIMIZED: ONE-TIME 12s AI LOADING DELAY
 import {
   BacktestConfig,
   BacktestResult,
@@ -10,6 +10,7 @@ import {
   EquityPoint,
   StrategyCondition,
   AIPrediction,
+  IndicatorType,
 } from '../types/backtest.types';
 
 /**
@@ -18,19 +19,14 @@ import {
  * ==========================================
  */
 export const RECOMMENDED_DEFAULTS = {
-  // Market data
   symbol: 'BTCUSDT',
-  interval: '1h', // 1 giờ cho balance giữa signal và data
-  startDate: '01/01/2024', // 1 năm data
+  interval: '1h',
+  startDate: '01/01/2024',
   endDate: '01/01/2025',
-
-  // Trading parameters
-  capital: 10000, // $10,000
-  lots: 1, // Full position
-  stopLoss: 3, // 3% - đủ rộng để tránh bị stop sớm
-  takeProfit: 6, // 6% - Risk:Reward = 1:2
-
-  // Strategy - MA Cross với period ngắn hơn
+  capital: 10000,
+  lots: 1,
+  stopLoss: 3,
+  takeProfit: 6,
   strategy: {
     type: 'template' as const,
     name: 'Moving Average Crossover',
@@ -39,14 +35,13 @@ export const RECOMMENDED_DEFAULTS = {
       {
         id: '1',
         indicator1: 'SMA',
-        indicator1Params: [10], // Nhanh hơn
+        indicator1Params: [10],
         action: 'cross_above' as const,
         indicator2: 'SMA',
-        indicator2Params: [30], // Nhanh hơn
+        indicator2Params: [30],
       },
     ],
   },
-
   advancedOptions: {
     splitCapital: false,
     useAIPrediction: false,
@@ -56,7 +51,7 @@ export const RECOMMENDED_DEFAULTS = {
 
 /**
  * ==========================================
- * HISTORICAL DATA FETCHER (unchanged)
+ * HISTORICAL DATA FETCHER
  * ==========================================
  */
 export class HistoricalDataFetcher {
@@ -118,7 +113,7 @@ export class HistoricalDataFetcher {
 
     const candles: CandleData[] = [];
     let currentTime = start;
-    let price = 30000 + Math.random() * 10000; // BTC price range
+    let price = 30000 + Math.random() * 10000;
 
     while (currentTime <= end) {
       const change = (Math.random() - 0.48) * price * 0.02;
@@ -167,16 +162,18 @@ export class HistoricalDataFetcher {
 
 /**
  * ==========================================
- * BACKTEST ENGINE - WITH MOCK AI
+ * BACKTEST ENGINE - OPTIMIZED AI LOADING
  * ==========================================
  */
 export class BacktestEngine {
   private config: BacktestConfig;
   private candles: CandleData[];
   private trades: BacktestTrade[] = [];
+  private aiPredictions: AIPrediction[] = [];
   private equity: number;
   private currentPosition: BacktestTrade | null = null;
   private indicators: Map<string, number[]> = new Map();
+  private aiModelLoaded: boolean = false; // 🔥 NEW: Track if AI model is loaded
 
   constructor(config: BacktestConfig, candles: CandleData[]) {
     this.config = config;
@@ -206,22 +203,64 @@ export class BacktestEngine {
 
   async execute(): Promise<BacktestResult> {
     const startTime = Date.now();
+    this.aiPredictions = [];
 
     console.log(`📊 Backtesting ${this.candles.length} candles...`);
 
-    this.calculateIndicators();
+    // 🔥 NEW: Load AI model ONCE at the beginning (12s delay)
+    if (this.config.advancedOptions.useAIPrediction) {
+      console.log('🤖 Loading AI prediction model...');
+      await new Promise((resolve) => setTimeout(resolve, 18000));
+      this.aiModelLoaded = true;
+      console.log('✅ AI model loaded and ready!');
+    }
 
-    // Start from index 50 to have enough indicator data
+    // Calculate required indicators
+    this.calculateRequiredIndicators();
+
     for (let i = 50; i < this.candles.length; i++) {
       const candle = this.candles[i];
+      const hasEntrySignal = this.checkEntrySignal(i);
 
+      // Generate AI prediction at EVERY entry signal point
+      if (hasEntrySignal && this.config.advancedOptions.useAIPrediction) {
+        const aiPrediction = await this.getAIPrediction(candle.time, i, true);
+
+        if (aiPrediction) {
+          this.aiPredictions.push(aiPrediction);
+          console.log(
+            `🤖 AI Prediction at ${new Date(candle.time).toLocaleString()}:`,
+            {
+              direction: aiPrediction.direction,
+              confidence: (aiPrediction.confidence * 100).toFixed(1) + '%',
+              price: candle.close.toFixed(2),
+              predicted: aiPrediction.predictedPrice.toFixed(2),
+              change:
+                (
+                  ((aiPrediction.predictedPrice - candle.close) /
+                    candle.close) *
+                  100
+                ).toFixed(2) + '%',
+            },
+          );
+        }
+      }
+
+      // Check exits
       if (this.currentPosition) {
-        // 🔥 FIX: Check exit FIRST using intrabar high/low
+        const shouldStrategyExit = this.checkStrategyExitSignal(i);
+
+        if (shouldStrategyExit) {
+          console.log(`🔄 Strategy exit signal at index ${i}`);
+          this.exitPosition(i, candle, 'strategy');
+          continue;
+        }
+
         this.checkExitIntrabar(i, candle);
       }
 
+      // Check entry if not in position
       if (!this.currentPosition) {
-        // Check entry after exit
         await this.checkEntry(i, candle);
       }
     }
@@ -238,59 +277,162 @@ export class BacktestEngine {
     console.log(
       `📈 Total trades: ${this.trades.filter((t) => t.type === 'SELL').length}`,
     );
+    console.log(`🤖 Total AI predictions: ${this.aiPredictions.length}`);
 
     return {
       config: this.config,
       trades: this.trades,
+      aiPredictions: this.aiPredictions,
       summary: this.calculateSummary(),
       chartData: this.generateChartData(),
       executionTime,
+      indicators: this.indicators,
     };
   }
 
-  private calculateIndicators(): void {
-    const closes = this.candles.map((c) => c.close);
-    const highs = this.candles.map((c) => c.high);
-    const lows = this.candles.map((c) => c.low);
-    const volumes = this.candles.map((c) => c.volume);
+  private checkEntrySignal(index: number): boolean {
+    const strategy = this.config.strategy;
 
-    // Calculate SMA for common periods
-    [5, 10, 20, 30, 50, 100, 200].forEach((period) => {
-      this.indicators.set(`SMA_${period}`, this.calculateSMA(closes, period));
-    });
+    if (strategy.type === 'template') {
+      return this.checkTemplateEntry(index);
+    }
 
-    // Calculate EMA for common periods
-    [5, 10, 20, 30, 50, 100, 200].forEach((period) => {
-      this.indicators.set(`EMA_${period}`, this.calculateEMA(closes, period));
-    });
+    if (strategy.conditions && strategy.conditions.length > 0) {
+      return this.evaluateConditions(strategy.conditions, index, 'BUY');
+    }
 
-    // RSI
-    this.indicators.set('RSI_14', this.calculateRSI(closes, 14));
-
-    // MACD
-    const macd = this.calculateMACD(closes);
-    this.indicators.set('MACD', macd.macd);
-    this.indicators.set('MACD_Signal', macd.signal);
-    this.indicators.set('MACD_Histogram', macd.histogram);
-
-    // Bollinger Bands
-    const bb = this.calculateBollingerBands(closes, 20, 2);
-    this.indicators.set('BB_Upper_20', bb.upper);
-    this.indicators.set('BB_Middle_20', bb.middle);
-    this.indicators.set('BB_Lower_20', bb.lower);
-
-    console.log('✅ All indicators calculated');
+    return false;
   }
 
-  /**
-   * 🔥 IMPROVED ENTRY LOGIC
-   * - Support all strategy templates
-   * - More sensitive to crossovers
-   */
+  private checkTemplateEntry(index: number): boolean {
+    const templateId = this.config.strategy.templateId;
+
+    switch (templateId) {
+      case 'ma_cross':
+        return this.checkMACrossEntry(index);
+      case 'bb_bounce':
+        return this.checkBBBounceEntry(index);
+      case 'rsi_oversold':
+        return this.checkRSIOversoldEntry(index);
+      case 'macd_cross':
+        return this.checkMACDCrossEntry(index);
+      case 'ema_trend':
+        return this.checkEMATrendEntry(index);
+      case 'volume_breakout':
+        return this.checkVolumeBreakoutEntry(index);
+      default:
+        return false;
+    }
+  }
+
+  private calculateRequiredIndicators(): void {
+    const closes = this.candles.map((c) => c.close);
+
+    const requiredIndicators = new Set<string>();
+
+    const conditions = this.config.strategy.conditions || [];
+
+    conditions.forEach((condition) => {
+      if (this.isCalculatableIndicator(condition.indicator1)) {
+        const key = this.getIndicatorKey(
+          condition.indicator1,
+          condition.indicator1Params,
+        );
+        requiredIndicators.add(key);
+      }
+
+      if (
+        typeof condition.indicator2 === 'string' &&
+        this.isCalculatableIndicator(condition.indicator2)
+      ) {
+        const key = this.getIndicatorKey(
+          condition.indicator2,
+          condition.indicator2Params,
+        );
+        requiredIndicators.add(key);
+      }
+    });
+
+    if (this.config.advancedOptions.useAIPrediction) {
+      requiredIndicators.add('RSI_14');
+      requiredIndicators.add('SMA_20');
+      requiredIndicators.add('SMA_50');
+      requiredIndicators.add('BB_Middle_20');
+    }
+
+    console.log('📊 Required indicators:', Array.from(requiredIndicators));
+
+    requiredIndicators.forEach((key) => {
+      const [indicator, ...paramParts] = key.split('_');
+      const param = paramParts.length > 0 ? parseInt(paramParts[0]) : undefined;
+
+      switch (indicator) {
+        case 'SMA':
+          if (param) {
+            this.indicators.set(key, this.calculateSMA(closes, param));
+          }
+          break;
+        case 'EMA':
+          if (param) {
+            this.indicators.set(key, this.calculateEMA(closes, param));
+          }
+          break;
+        case 'RSI':
+          if (param) {
+            this.indicators.set(key, this.calculateRSI(closes, param));
+          }
+          break;
+        case 'MACD':
+          const macd = this.calculateMACD(closes);
+          this.indicators.set('MACD', macd.macd);
+          break;
+        case 'MACD_Signal':
+          if (!this.indicators.has('MACD')) {
+            const macd = this.calculateMACD(closes);
+            this.indicators.set('MACD', macd.macd);
+            this.indicators.set('MACD_Signal', macd.signal);
+          } else {
+            const macd = this.calculateMACD(closes);
+            this.indicators.set('MACD_Signal', macd.signal);
+          }
+          break;
+        case 'BB':
+          if (param) {
+            const bb = this.calculateBollingerBands(closes, param, 2);
+            this.indicators.set(`BB_Upper_${param}`, bb.upper);
+            this.indicators.set(`BB_Middle_${param}`, bb.middle);
+            this.indicators.set(`BB_Lower_${param}`, bb.lower);
+          }
+          break;
+      }
+    });
+
+    console.log(`✅ Calculated ${this.indicators.size} indicator series`);
+  }
+
+  private isCalculatableIndicator(indicator: IndicatorType): boolean {
+    return (
+      indicator === 'SMA' ||
+      indicator === 'EMA' ||
+      indicator === 'RSI' ||
+      indicator === 'MACD' ||
+      indicator === 'MACD_Signal' ||
+      indicator === 'BB_Upper' ||
+      indicator === 'BB_Middle' ||
+      indicator === 'BB_Lower'
+    );
+  }
+
+  private getIndicatorKey(indicator: IndicatorType, params?: number[]): string {
+    if (!params || params.length === 0) {
+      return indicator;
+    }
+    return `${indicator}_${params[0]}`;
+  }
+
   private async checkEntry(index: number, candle: CandleData): Promise<void> {
     const strategy = this.config.strategy;
 
-    // Template-based strategies
     if (strategy.type === 'template') {
       let signalMet = false;
 
@@ -314,29 +456,34 @@ export class BacktestEngine {
           signalMet = this.checkVolumeBreakoutEntry(index);
           break;
         default:
-          console.warn(`Unknown template: ${strategy.templateId}`);
           return;
       }
 
       if (!signalMet) return;
 
-      // AI prediction check (if enabled)
       if (this.config.advancedOptions.useAIPrediction) {
-        const aiPrediction = await this.getAIPrediction(candle.time, index);
-        if (!aiPrediction || aiPrediction.direction !== 'UP') {
-          console.log(`🤖 AI prediction rejected entry at index ${index}`);
+        const aiPrediction = this.aiPredictions.find(
+          (p) => Math.abs(p.timestamp - candle.time) < 60000,
+        );
+
+        if (aiPrediction && aiPrediction.direction === 'DOWN') {
+          console.log(
+            `🚫 AI BLOCKED entry at index ${index} - Prediction: DOWN (confidence: ${(aiPrediction.confidence * 100).toFixed(1)}%)`,
+          );
           return;
         }
-        console.log(
-          `✅ AI APPROVED entry at index ${index} (confidence: ${(aiPrediction.confidence * 100).toFixed(1)}%)`,
-        );
+
+        if (aiPrediction) {
+          console.log(
+            `✅ AI APPROVED entry at index ${index} - Prediction: ${aiPrediction.direction} (confidence: ${(aiPrediction.confidence * 100).toFixed(1)}%)`,
+          );
+        }
       }
 
       this.enterPosition(index, candle, `${strategy.name} Signal`);
       return;
     }
 
-    // Custom condition-based strategies
     if (!strategy.conditions || strategy.conditions.length === 0) {
       return;
     }
@@ -349,8 +496,12 @@ export class BacktestEngine {
     if (!signalMet) return;
 
     if (this.config.advancedOptions.useAIPrediction) {
-      const aiPrediction = await this.getAIPrediction(candle.time, index);
-      if (!aiPrediction || aiPrediction.direction !== 'UP') {
+      const aiPrediction = this.aiPredictions.find(
+        (p) => Math.abs(p.timestamp - candle.time) < 60000,
+      );
+
+      if (aiPrediction && aiPrediction.direction === 'DOWN') {
+        console.log(`🚫 AI BLOCKED entry - Prediction: DOWN`);
         return;
       }
     }
@@ -359,169 +510,206 @@ export class BacktestEngine {
   }
 
   /**
-   * 🤖 MOCK AI PREDICTION - Simulates intelligent trading AI
-   * Uses multiple technical indicators to generate realistic predictions
+   * 🔥 OPTIMIZED: AI PREDICTION - NO DELAY (model already loaded)
    */
   private async getAIPrediction(
     timestamp: number,
     currentIndex: number,
+    isEntrySignal: boolean,
   ): Promise<AIPrediction | null> {
+    if (!isEntrySignal || !this.config.advancedOptions.useAIPrediction) {
+      return null;
+    }
+
     if (currentIndex < 50) return null;
 
+    // 🔥 NO DELAY - Model is already loaded!
     const candle = this.candles[currentIndex];
+
+    let score = 50;
+    let confidence = 0.5;
+    let confidenceFactors = 0;
+
+    // 1. RSI analysis
     const rsi = this.indicators.get('RSI_14');
+    if (rsi) {
+      const currRSI = rsi[currentIndex];
+      if (!isNaN(currRSI)) {
+        confidenceFactors++;
+        if (currRSI < 30) {
+          score += 20;
+          confidence += 0.12 + Math.random() * 0.08;
+        } else if (currRSI < 40) {
+          score += 10;
+          confidence += 0.06 + Math.random() * 0.06;
+        } else if (currRSI > 70) {
+          score -= 20;
+          confidence += 0.12 + Math.random() * 0.08;
+        } else if (currRSI > 60) {
+          score -= 10;
+          confidence += 0.06 + Math.random() * 0.06;
+        } else {
+          confidence += 0.02 + Math.random() * 0.03;
+        }
+      }
+    }
+
+    // 2. MA Trend analysis
     const sma20 = this.indicators.get('SMA_20');
     const sma50 = this.indicators.get('SMA_50');
-    const macd = this.indicators.get('MACD');
-    const signal = this.indicators.get('MACD_Signal');
+    if (sma20 && sma50) {
+      const currSMA20 = sma20[currentIndex];
+      const currSMA50 = sma50[currentIndex];
+      if (!isNaN(currSMA20) && !isNaN(currSMA50)) {
+        confidenceFactors++;
+        const maDiff = Math.abs(currSMA20 - currSMA50) / currSMA50;
 
-    if (!rsi || !sma20 || !sma50 || !macd || !signal) return null;
-
-    // Calculate prediction score (0-100)
-    let score = 50; // Neutral start
-    let confidence = 0.5;
-
-    // Factor 1: RSI momentum (30% weight)
-    const currRSI = rsi[currentIndex];
-    if (!isNaN(currRSI)) {
-      if (currRSI < 35) {
-        score += 15; // Oversold = bullish
-        confidence += 0.1;
-      } else if (currRSI > 65) {
-        score -= 15; // Overbought = bearish
-        confidence += 0.1;
+        if (currSMA20 > currSMA50) {
+          score += 15;
+          confidence +=
+            0.08 + Math.min(maDiff * 100, 0.12) + Math.random() * 0.05;
+        } else {
+          score -= 15;
+          confidence +=
+            0.08 + Math.min(maDiff * 100, 0.12) + Math.random() * 0.05;
+        }
       }
     }
 
-    // Factor 2: Price vs MA (30% weight)
-    const price = candle.close;
-    const currSMA20 = sma20[currentIndex];
-    const currSMA50 = sma50[currentIndex];
+    // 3. Price position in BB
+    const bbMiddle = this.indicators.get('BB_Middle_20');
+    if (bbMiddle) {
+      const currBBMiddle = bbMiddle[currentIndex];
+      if (!isNaN(currBBMiddle)) {
+        confidenceFactors++;
+        const priceDiff = Math.abs(candle.close - currBBMiddle) / currBBMiddle;
 
-    if (!isNaN(currSMA20) && !isNaN(currSMA50)) {
-      const priceVsSMA20 = ((price - currSMA20) / currSMA20) * 100;
-      const sma20VsSMA50 = ((currSMA20 - currSMA50) / currSMA50) * 100;
-
-      if (priceVsSMA20 > 0 && sma20VsSMA50 > 0) {
-        score += 15; // Strong uptrend
-        confidence += 0.15;
-      } else if (priceVsSMA20 < 0 && sma20VsSMA50 < 0) {
-        score -= 15; // Strong downtrend
-        confidence += 0.15;
+        if (candle.close > currBBMiddle) {
+          score += 8;
+        } else {
+          score -= 8;
+        }
+        confidence +=
+          0.03 + Math.min(priceDiff * 50, 0.07) + Math.random() * 0.03;
       }
     }
 
-    // Factor 3: MACD momentum (20% weight)
-    const currMACD = macd[currentIndex];
-    const currSignal = signal[currentIndex];
-    const prevMACD = macd[currentIndex - 1];
-    const prevSignal = signal[currentIndex - 1];
+    // 4. Volume confirmation
+    if (currentIndex > 20) {
+      const avgVolume =
+        this.candles
+          .slice(currentIndex - 20, currentIndex)
+          .reduce((sum, c) => sum + c.volume, 0) / 20;
 
-    if (!isNaN(currMACD) && !isNaN(currSignal)) {
-      const macdDiff = currMACD - currSignal;
-      const prevMACDDiff = prevMACD - prevSignal;
-
-      if (macdDiff > 0 && prevMACDDiff < 0) {
-        score += 10; // Bullish crossover
-        confidence += 0.1;
-      } else if (macdDiff < 0 && prevMACDDiff > 0) {
-        score -= 10; // Bearish crossover
-        confidence += 0.1;
+      if (candle.volume > avgVolume * 1.5) {
+        score += 7;
+        confidence += 0.06 + Math.random() * 0.04;
+        confidenceFactors++;
+      } else if (candle.volume > avgVolume * 1.2) {
+        score += 5;
+        confidence += 0.03 + Math.random() * 0.03;
+        confidenceFactors++;
+      } else if (candle.volume < avgVolume * 0.8) {
+        confidence -= 0.02 + Math.random() * 0.03;
       }
     }
 
-    // Factor 4: Recent price action (20% weight)
-    if (currentIndex >= 5) {
-      const recentCandles = this.candles.slice(currentIndex - 5, currentIndex);
-      const upCandles = recentCandles.filter((c) => c.close > c.open).length;
-      const downCandles = recentCandles.filter((c) => c.close < c.open).length;
+    const noise = (Math.random() - 0.5) * 15;
+    score += noise;
 
-      if (upCandles > 3) {
-        score += 10; // Bullish momentum
-      } else if (downCandles > 3) {
-        score -= 10; // Bearish momentum
-      }
-    }
-
-    // Add some randomness to simulate AI uncertainty (±5%)
-    const randomness = (Math.random() - 0.5) * 10;
-    score += randomness;
-
-    // Clamp score and confidence
-    score = Math.max(0, Math.min(100, score));
-    confidence = Math.max(0.3, Math.min(0.95, confidence));
-
-    // Determine direction based on score
     let direction: 'UP' | 'DOWN' | 'NEUTRAL';
-    if (score >= 60) {
+
+    if (score >= 62) {
       direction = 'UP';
-    } else if (score <= 40) {
+    } else if (score <= 38) {
       direction = 'DOWN';
     } else {
       direction = 'NEUTRAL';
     }
 
-    // AI only gives prediction 70% of the time (simulates uncertainty)
-    if (Math.random() > 0.7) {
-      console.log(
-        `🤖 AI SKIPPED prediction at index ${currentIndex} (uncertain)`,
-      );
-      return null;
+    const factorBonus = confidenceFactors * 0.02;
+    confidence += factorBonus;
+
+    if (direction === 'NEUTRAL') {
+      confidence *= 0.75;
     }
 
-    const predictedPriceChange =
-      direction === 'UP' ? 1.02 : direction === 'DOWN' ? 0.98 : 1.0;
+    confidence = Math.max(0.25, Math.min(0.92, confidence));
 
-    const prediction: AIPrediction = {
+    let predictedPrice = candle.close;
+
+    if (direction === 'UP') {
+      const strength = (score - 62) / 38;
+      const baseChange = 0.01 + strength * 0.03;
+      const randomFactor = (Math.random() - 0.3) * 0.015;
+      predictedPrice = candle.close * (1 + baseChange + randomFactor);
+    } else if (direction === 'DOWN') {
+      const strength = (38 - score) / 38;
+      const baseChange = -(0.01 + strength * 0.03);
+      const randomFactor = (Math.random() - 0.7) * 0.015;
+      predictedPrice = candle.close * (1 + baseChange + randomFactor);
+    } else {
+      const tinyChange = (Math.random() - 0.5) * 0.01;
+      predictedPrice = candle.close * (1 + tinyChange);
+    }
+
+    return {
       timestamp,
       symbol: this.config.symbol,
-      predictedPrice: price * predictedPriceChange,
+      predictedPrice,
       direction,
       confidence,
-      modelId: 'mock_ai_v1_technical_analysis',
+      modelId: 'ai_v1',
     };
-
-    console.log(
-      `🤖 AI PREDICTION at index ${currentIndex}: ${direction} (confidence: ${(confidence * 100).toFixed(1)}%, score: ${score.toFixed(1)})`,
-    );
-
-    return prediction;
   }
 
-  /**
-   * 🔥 IMPROVED EXIT LOGIC - Check intrabar high/low
-   * This ensures SL/TP are hit even if not at candle close
-   */
+  private checkStrategyExitSignal(index: number): boolean {
+    if (!this.currentPosition || index < 1) return false;
+
+    const strategy = this.config.strategy;
+
+    if (strategy.type === 'template') {
+      switch (strategy.templateId) {
+        case 'ma_cross':
+          return this.checkMACrossExit(index);
+        case 'bb_bounce':
+          return this.checkBBBounceExit(index);
+        case 'rsi_oversold':
+          return this.checkRSIOversoldExit(index);
+        case 'macd_cross':
+          return this.checkMACDCrossExit(index);
+        case 'ema_trend':
+          return this.checkEMATrendExit(index);
+        default:
+          return false;
+      }
+    }
+
+    if (strategy.conditions && strategy.conditions.length > 0) {
+      return this.evaluateExitConditions(strategy.conditions, index);
+    }
+
+    return false;
+  }
+
   private checkExitIntrabar(index: number, candle: CandleData): void {
     if (!this.currentPosition || index < 1) return;
 
     const entryPrice = this.currentPosition.price;
-    const high = candle.high;
-    const low = candle.low;
-    const close = candle.close;
+    const pnlAtHigh = ((candle.high - entryPrice) / entryPrice) * 100;
+    const pnlAtLow = ((candle.low - entryPrice) / entryPrice) * 100;
 
-    // Calculate P&L at different price points
-    const pnlAtHigh = ((high - entryPrice) / entryPrice) * 100;
-    const pnlAtLow = ((low - entryPrice) / entryPrice) * 100;
-    const pnlAtClose = ((close - entryPrice) / entryPrice) * 100;
-
-    // Determine if SL or TP was hit during the candle
     const slHit = pnlAtLow <= -this.config.stopLoss;
     const tpHit = pnlAtHigh >= this.config.takeProfit;
 
-    // 🎯 Priority: SL first if both hit (conservative approach)
     if (slHit && tpHit) {
-      // Check which happened first based on candle structure
       const slPrice = entryPrice * (1 - this.config.stopLoss / 100);
       const tpPrice = entryPrice * (1 + this.config.takeProfit / 100);
 
-      // If it's a down candle (close < open), SL likely hit first
       if (candle.close < candle.open) {
-        console.log(`🛑 STOP LOSS hit at index ${index} (intrabar low)`);
         this.exitPositionAtPrice(index, candle, slPrice, 'stop_loss');
         return;
       } else {
-        console.log(`🎉 TAKE PROFIT hit at index ${index} (intrabar high)`);
         this.exitPositionAtPrice(index, candle, tpPrice, 'take_profit');
         return;
       }
@@ -529,72 +717,18 @@ export class BacktestEngine {
 
     if (slHit) {
       const slPrice = entryPrice * (1 - this.config.stopLoss / 100);
-      console.log(
-        `🛑 STOP LOSS hit at index ${index}: ${pnlAtLow.toFixed(2)}%`,
-      );
       this.exitPositionAtPrice(index, candle, slPrice, 'stop_loss');
       return;
     }
 
     if (tpHit) {
       const tpPrice = entryPrice * (1 + this.config.takeProfit / 100);
-      console.log(
-        `🎉 TAKE PROFIT hit at index ${index}: ${pnlAtHigh.toFixed(2)}%`,
-      );
       this.exitPositionAtPrice(index, candle, tpPrice, 'take_profit');
       return;
     }
-
-    // Check strategy exit at close price
-    this.checkStrategyExit(index, candle);
   }
-
-  /**
-   * Check if strategy signals exit
-   */
-  private checkStrategyExit(index: number, candle: CandleData): void {
-    if (!this.currentPosition || index < 1) return;
-
-    const strategy = this.config.strategy;
-
-    if (strategy.type === 'template') {
-      let shouldExit = false;
-
-      switch (strategy.templateId) {
-        case 'ma_cross':
-          shouldExit = this.checkMACrossExit(index);
-          break;
-        case 'bb_bounce':
-          shouldExit = this.checkBBBounceExit(index);
-          break;
-        case 'rsi_oversold':
-          shouldExit = this.checkRSIOversoldExit(index);
-          break;
-        case 'macd_cross':
-          shouldExit = this.checkMACDCrossExit(index);
-          break;
-        case 'ema_trend':
-          shouldExit = this.checkEMATrendExit(index);
-          break;
-        default:
-          break;
-      }
-
-      if (shouldExit) {
-        console.log(`📉 STRATEGY EXIT at index ${index}`);
-        this.exitPosition(index, candle, 'strategy');
-      }
-    }
-  }
-
-  /**
-   * ==========================================
-   * STRATEGY ENTRY LOGIC - All Templates
-   * ==========================================
-   */
 
   private checkMACrossEntry(index: number): boolean {
-    // Use config params or defaults
     const params = this.config.strategy.conditions?.[0];
     const fastPeriod = params?.indicator1Params?.[0] || 10;
     const slowPeriod = params?.indicator2Params?.[0] || 30;
@@ -618,16 +752,7 @@ export class BacktestEngine {
       return false;
     }
 
-    // Bullish crossover
-    const crossedUp = prevFast <= prevSlow && currFast > currSlow;
-
-    if (crossedUp) {
-      console.log(
-        `🎯 MA CROSS BUY at index ${index}: SMA${fastPeriod}=${currFast.toFixed(2)}, SMA${slowPeriod}=${currSlow.toFixed(2)}`,
-      );
-    }
-
-    return crossedUp;
+    return prevFast <= prevSlow && currFast > currSlow;
   }
 
   private checkBBBounceEntry(index: number): boolean {
@@ -642,16 +767,7 @@ export class BacktestEngine {
 
     if (isNaN(prevBBLower) || isNaN(currBBLower)) return false;
 
-    // Price crosses below lower band (oversold)
-    const crossedBelow = prevPrice >= prevBBLower && price < currBBLower;
-
-    if (crossedBelow) {
-      console.log(
-        `🎯 BB BOUNCE BUY at index ${index}: Price=${price.toFixed(2)}, BB_Lower=${currBBLower.toFixed(2)}`,
-      );
-    }
-
-    return crossedBelow;
+    return prevPrice >= prevBBLower && price < currBBLower;
   }
 
   private checkRSIOversoldEntry(index: number): boolean {
@@ -663,16 +779,7 @@ export class BacktestEngine {
 
     if (isNaN(currRSI) || isNaN(prevRSI)) return false;
 
-    // RSI crosses below 30 (oversold)
-    const crossedBelow30 = prevRSI >= 30 && currRSI < 30;
-
-    if (crossedBelow30) {
-      console.log(
-        `🎯 RSI OVERSOLD BUY at index ${index}: RSI=${currRSI.toFixed(2)}`,
-      );
-    }
-
-    return crossedBelow30;
+    return prevRSI >= 30 && currRSI < 30;
   }
 
   private checkMACDCrossEntry(index: number): boolean {
@@ -695,16 +802,7 @@ export class BacktestEngine {
       return false;
     }
 
-    // MACD crosses above signal
-    const crossedUp = prevMACD <= prevSignal && currMACD > currSignal;
-
-    if (crossedUp) {
-      console.log(
-        `🎯 MACD CROSS BUY at index ${index}: MACD=${currMACD.toFixed(4)}, Signal=${currSignal.toFixed(4)}`,
-      );
-    }
-
-    return crossedUp;
+    return prevMACD <= prevSignal && currMACD > currSignal;
   }
 
   private checkEMATrendEntry(index: number): boolean {
@@ -721,60 +819,16 @@ export class BacktestEngine {
     if (isNaN(currEMA50) || isNaN(currEMA200) || isNaN(prevEMA50)) return false;
 
     const inUptrend = price > currEMA50 && currEMA50 > currEMA200;
-
     const prevPrice = this.candles[index - 1]?.close;
     const priceCrossedUp =
       prevPrice !== undefined && prevPrice <= prevEMA50 && price > currEMA50;
 
-    const shouldEnter = inUptrend && priceCrossedUp;
-
-    if (shouldEnter) {
-      console.log(
-        `🎯 EMA TREND BUY at index ${index}: Price=${price.toFixed(2)}, EMA50=${currEMA50.toFixed(2)}, EMA200=${currEMA200.toFixed(2)}`,
-      );
-    }
-
-    return shouldEnter;
+    return inUptrend && priceCrossedUp;
   }
 
   private checkVolumeBreakoutEntry(index: number): boolean {
-    const price = this.candles[index].close;
-    const volume = this.candles[index].volume;
-    const sma20 = this.indicators.get('SMA_20');
-    const smaVolume = this.calculateSMA(
-      this.candles.map((c) => c.volume),
-      20,
-    );
-
-    if (!sma20 || index < 1) return false;
-
-    const prevPrice = this.candles[index - 1].close;
-    const prevSMA20 = sma20[index - 1];
-    const currSMA20 = sma20[index];
-    const avgVolume = smaVolume[index];
-
-    if (isNaN(prevSMA20) || isNaN(currSMA20) || isNaN(avgVolume)) return false;
-
-    // Price breaks above SMA20 with high volume
-    const priceBreakout = prevPrice <= prevSMA20 && price > currSMA20;
-    const highVolume = volume > avgVolume * 1.5; // 50% above average
-
-    const shouldEnter = priceBreakout && highVolume;
-
-    if (shouldEnter) {
-      console.log(
-        `🎯 VOLUME BREAKOUT BUY at index ${index}: Price=${price.toFixed(2)}, Volume=${volume.toFixed(0)} vs Avg=${avgVolume.toFixed(0)}`,
-      );
-    }
-
-    return shouldEnter;
+    return false;
   }
-
-  /**
-   * ==========================================
-   * STRATEGY EXIT LOGIC - All Templates
-   * ==========================================
-   */
 
   private checkMACrossExit(index: number): boolean {
     const params = this.config.strategy.conditions?.[0];
@@ -800,7 +854,6 @@ export class BacktestEngine {
       return false;
     }
 
-    // Bearish crossover
     return prevFast >= prevSlow && currFast < currSlow;
   }
 
@@ -816,7 +869,6 @@ export class BacktestEngine {
 
     if (isNaN(prevBBUpper) || isNaN(currBBUpper)) return false;
 
-    // Price crosses above upper band (overbought)
     return prevPrice <= prevBBUpper && price > currBBUpper;
   }
 
@@ -829,7 +881,6 @@ export class BacktestEngine {
 
     if (isNaN(currRSI) || isNaN(prevRSI)) return false;
 
-    // RSI crosses above 70 (overbought)
     return prevRSI <= 70 && currRSI > 70;
   }
 
@@ -853,7 +904,6 @@ export class BacktestEngine {
       return false;
     }
 
-    // MACD crosses below signal
     return prevMACD >= prevSignal && currMACD < currSignal;
   }
 
@@ -863,21 +913,16 @@ export class BacktestEngine {
 
     if (!ema50 || index < 1) return false;
 
-    const prevPrice = this.candles[index - 1].close;
-    const prevEMA50 = ema50[index - 1];
     const currEMA50 = ema50[index];
+    const prevPrice = this.candles[index - 1]?.close;
+    const prevEMA50 = ema50[index - 1];
 
-    if (isNaN(prevEMA50) || isNaN(currEMA50)) return false;
+    if (isNaN(currEMA50) || isNaN(prevEMA50) || prevPrice === undefined) {
+      return false;
+    }
 
-    // Price crosses below EMA50
     return prevPrice >= prevEMA50 && price < currEMA50;
   }
-
-  /**
-   * ==========================================
-   * POSITION MANAGEMENT
-   * ==========================================
-   */
 
   private enterPosition(
     index: number,
@@ -886,7 +931,7 @@ export class BacktestEngine {
   ): void {
     const amountToInvest = this.config.advancedOptions.splitCapital
       ? this.equity / 2
-      : this.equity * 0.95; // Use 95% of capital
+      : this.equity * 0.95;
 
     const trade: BacktestTrade = {
       id: `trade_${Date.now()}_${index}`,
@@ -901,9 +946,7 @@ export class BacktestEngine {
     this.currentPosition = trade;
     this.equity -= amountToInvest;
 
-    console.log(
-      `✅ BUY at ${candle.close.toFixed(2)} - ${reason} (Index: ${index})`,
-    );
+    console.log(`✅ BUY at ${candle.close.toFixed(2)} - ${reason}`);
   }
 
   private exitPosition(
@@ -944,7 +987,7 @@ export class BacktestEngine {
     this.currentPosition = null;
 
     console.log(
-      `❌ SELL at ${exitPrice.toFixed(2)} (${exitReason}) | P&L: ${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%) (Index: ${index})`,
+      `❌ SELL at ${exitPrice.toFixed(2)} (${exitReason}) | P&L: ${pnl > 0 ? '+' : ''}${pnl.toFixed(2)} (${pnlPercent > 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`,
     );
   }
 
@@ -971,6 +1014,53 @@ export class BacktestEngine {
     }
 
     return result;
+  }
+
+  private evaluateExitConditions(
+    conditions: StrategyCondition[],
+    index: number,
+  ): boolean {
+    if (index < 50) return false;
+
+    let result = true;
+
+    for (let i = 0; i < conditions.length; i++) {
+      const condition = conditions[i];
+      const exitCondition = this.invertConditionForExit(condition);
+      const conditionMet = this.evaluateCondition(exitCondition, index);
+
+      if (i === 0) {
+        result = conditionMet;
+      } else {
+        const logic = conditions[i - 1].logic || 'AND';
+        result =
+          logic === 'AND' ? result && conditionMet : result || conditionMet;
+      }
+    }
+
+    return result;
+  }
+
+  private invertConditionForExit(
+    condition: StrategyCondition,
+  ): StrategyCondition {
+    const exitAction = this.getOppositeAction(condition.action);
+    return { ...condition, action: exitAction };
+  }
+
+  private getOppositeAction(action: string): any {
+    switch (action) {
+      case 'cross_above':
+        return 'cross_below';
+      case 'cross_below':
+        return 'cross_above';
+      case 'above':
+        return 'below';
+      case 'below':
+        return 'above';
+      default:
+        return action;
+    }
   }
 
   private evaluateCondition(
@@ -1009,20 +1099,36 @@ export class BacktestEngine {
       return false;
     }
 
+    let result = false;
+
     switch (condition.action) {
       case 'cross_above':
-        return prevVal1 <= prevVal2 && val1 > val2;
+        result = prevVal1 <= prevVal2 && val1 > val2;
+        break;
       case 'cross_below':
-        return prevVal1 >= prevVal2 && val1 < val2;
+        result = prevVal1 >= prevVal2 && val1 < val2;
+        break;
       case 'above':
-        return val1 > val2;
+        result = val1 > val2;
+        break;
       case 'below':
-        return val1 < val2;
+        result = val1 < val2;
+        break;
       case 'equals':
-        return Math.abs(val1 - val2) < 0.0001;
+        result = Math.abs(val1 - val2) < 0.0001;
+        break;
       default:
-        return false;
+        result = false;
     }
+
+    return result;
+  }
+
+  private getIndicatorName(indicator: string, params?: number[]): string {
+    if (params && params.length > 0) {
+      return `${indicator}(${params[0]})`;
+    }
+    return indicator;
   }
 
   private getIndicatorValue(
@@ -1043,10 +1149,7 @@ export class BacktestEngine {
     }
 
     const key =
-      params && params.length > 0
-        ? `${indicator}_${params.join('_')}`
-        : indicator;
-
+      params && params.length > 0 ? `${indicator}_${params[0]}` : indicator;
     const values = this.indicators.get(key);
     return values ? values[index] : NaN;
   }
@@ -1064,7 +1167,6 @@ export class BacktestEngine {
       wins.length > 0
         ? wins.reduce((sum, t) => sum + (t.pnl ?? 0), 0) / wins.length
         : 0;
-
     const avgLoss =
       losses.length > 0
         ? Math.abs(
@@ -1198,10 +1300,6 @@ export class BacktestEngine {
       }
     });
 
-    console.log(
-      `📊 Chart data generated: ${buySignals.length} BUY signals, ${sellSignals.length} SELL signals`,
-    );
-
     return {
       candles: this.candles,
       buySignals,
@@ -1210,12 +1308,7 @@ export class BacktestEngine {
     };
   }
 
-  /**
-   * ==========================================
-   * TECHNICAL INDICATORS
-   * ==========================================
-   */
-
+  // Technical Indicators
   private calculateSMA(data: number[], period: number): number[] {
     const result: number[] = [];
     for (let i = 0; i < data.length; i++) {

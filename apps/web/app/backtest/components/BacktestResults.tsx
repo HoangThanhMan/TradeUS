@@ -1,11 +1,16 @@
-// app/backtest/components/BacktestResults.tsx - WITH BUY/SELL IN HISTORY TABLE
+// app/backtest/components/BacktestResults.tsx - UPDATED AI LEGEND
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { BacktestResult } from '../../../src/types/backtest.types';
+import {
+  BacktestResult,
+  AIPrediction,
+} from '../../../src/types/backtest.types';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { KLineChart } from '../../../src/components/chart-tools/KLineChart';
 import { BacktestArrowLayer } from './BacktestArrowLayer';
+import { BacktestIndicatorLayer } from './BacktestIndicatorLayer';
+import { BacktestAILayer } from './BacktestAILayer';
 
 const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -21,15 +26,50 @@ export function BacktestResults({ result, isLoading }: Props) {
   const chartInstanceRef = useRef<any>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
   const [chartReady, setChartReady] = useState(false);
+  const [showAIPredictions, setShowAIPredictions] = useState(
+    result?.config.advancedOptions.useAIPrediction || false,
+  );
 
   const handleChartRef = useCallback((chartInstance: any) => {
-    console.log('📊 Chart ref callback triggered:', !!chartInstance);
     if (chartInstance) {
       chartInstanceRef.current = chartInstance;
+
+      try {
+        chartInstance.removeIndicator('candle_pane', 'MA');
+        chartInstance.removeIndicator(volPaneId);
+      } catch (e) {
+        console.warn('Could not remove MA:', e);
+      }
+
       setChartReady(true);
-      console.log('✅ Chart instance set successfully');
     }
   }, []);
+
+  const aiPredictions = React.useMemo(() => {
+    if (!result || !result.aiPredictions || result.aiPredictions.length === 0) {
+      console.log('⚠️ No AI predictions in result:', {
+        hasResult: !!result,
+        hasAIPredictions: !!result?.aiPredictions,
+        count: result?.aiPredictions?.length || 0,
+      });
+      return [];
+    }
+
+    // 🔥 Return ALL AI predictions without filtering
+    console.log('📊 Total AI predictions:', result.aiPredictions.length);
+    console.log('📋 Sample predictions:', result.aiPredictions.slice(0, 3));
+    return result.aiPredictions;
+  }, [result]);
+
+  useEffect(() => {
+    console.log('🔍 BacktestResults AI Debug:', {
+      useAIPrediction: result?.config.advancedOptions.useAIPrediction,
+      showAIPredictions,
+      hasResult: !!result,
+      aiPredictionsCount: aiPredictions.length,
+      chartReady,
+    });
+  }, [result, showAIPredictions, aiPredictions, chartReady]);
 
   if (isLoading) {
     return (
@@ -78,7 +118,6 @@ export function BacktestResults({ result, isLoading }: Props) {
     quoteVolume: c.volume * c.close,
   }));
 
-  // Convert signals to arrow format
   const buyArrows = result.chartData.buySignals.map((s) => ({
     timestamp: s.timestamp,
     price: s.price,
@@ -96,18 +135,56 @@ export function BacktestResults({ result, isLoading }: Props) {
     candleHigh: s.candleHigh,
   }));
 
-  // Tạo mảng trades đã được sắp xếp theo thời gian (BUY và SELL kết hợp)
+  const strategyConditions = result.config.strategy.conditions || [];
+
   const allTrades = [...result.trades].sort(
     (a, b) => a.timestamp - b.timestamp,
   );
 
-  // Tìm trade pair (BUY + SELL liên quan)
-  const getTradePair = (sellTrade: any) => {
-    const buyTrade = result.trades.find(
-      (t) => t.type === 'BUY' && t.timestamp < sellTrade.timestamp,
-    );
-    return buyTrade;
-  };
+  const legendIndicators = (() => {
+    const indicatorsMap = new Map<string, { label: string; color: string }>();
+
+    strategyConditions.forEach((cond) => {
+      if (
+        cond.indicator1 === 'SMA' ||
+        cond.indicator1 === 'EMA' ||
+        cond.indicator1 === 'BB_Upper' ||
+        cond.indicator1 === 'BB_Middle' ||
+        cond.indicator1 === 'BB_Lower'
+      ) {
+        const period = cond.indicator1Params?.[0];
+        const key = `${cond.indicator1}_${period || ''}`;
+        const label = `${cond.indicator1}(${period || ''})`;
+        if (!indicatorsMap.has(key)) {
+          indicatorsMap.set(key, {
+            label,
+            color: cond.indicator1Color || '#F97316',
+          });
+        }
+      }
+
+      if (
+        typeof cond.indicator2 === 'string' &&
+        (cond.indicator2 === 'SMA' ||
+          cond.indicator2 === 'EMA' ||
+          cond.indicator2 === 'BB_Upper' ||
+          cond.indicator2 === 'BB_Middle' ||
+          cond.indicator2 === 'BB_Lower')
+      ) {
+        const period = cond.indicator2Params?.[0];
+        const key = `${cond.indicator2}_${period || ''}`;
+        const label = `${cond.indicator2}(${period || ''})`;
+        if (!indicatorsMap.has(key)) {
+          indicatorsMap.set(key, {
+            label,
+            color: cond.indicator2Color || '#3B82F6',
+          });
+        }
+      }
+    });
+
+    return Array.from(indicatorsMap.values());
+  })();
 
   return (
     <div className={`bg-white rounded-lg ${pjs.className}`}>
@@ -129,6 +206,22 @@ export function BacktestResults({ result, isLoading }: Props) {
           </div>
 
           <div className="flex items-center gap-4">
+            {result.config.advancedOptions.useAIPrediction && (
+              <button
+                onClick={() => setShowAIPredictions(!showAIPredictions)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-bold transition-all ${
+                  showAIPredictions
+                    ? 'bg-purple-50 border-purple-200 text-purple-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div
+                  className={`w-3 h-3 rounded-full ${showAIPredictions ? 'bg-purple-500' : 'bg-gray-400'}`}
+                ></div>
+                <span>AI ({aiPredictions.length})</span>
+              </button>
+            )}
+
             <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-md border border-green-200">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span className="text-xs font-bold text-green-700">
@@ -159,6 +252,24 @@ export function BacktestResults({ result, isLoading }: Props) {
                 isLocked={false}
               />
 
+              {chartReady && result.indicators && (
+                <BacktestIndicatorLayer
+                  chartInstance={chartInstanceRef.current}
+                  conditions={strategyConditions}
+                  indicators={result.indicators}
+                  candles={result.chartData.candles}
+                />
+              )}
+
+              {chartReady && result.config.advancedOptions.useAIPrediction && (
+                <BacktestAILayer
+                  chartInstance={chartInstanceRef.current}
+                  aiPredictions={aiPredictions}
+                  candles={result.chartData.candles}
+                  showPredictions={showAIPredictions}
+                />
+              )}
+
               {chartReady && (
                 <BacktestArrowLayer
                   buySignals={buyArrows}
@@ -177,9 +288,10 @@ export function BacktestResults({ result, isLoading }: Props) {
             </div>
           )}
 
-          {/* Professional Legend */}
-          <div className="absolute bottom-[-40] left-1/2 transform -translate-x-1/2 bg-white/95 px-4 py-2.5 rounded-lg shadow-lg z-10 border border-gray-200">
+          {/* 🔥 IMPROVED LEGEND WITH DETAILED AI EXPLANATION */}
+          <div className="absolute bottom-[-40] left-1/2 transform -translate-x-1/2 bg-white/95 px-4 py-2.5 rounded-lg shadow-lg z-[100] border border-gray-200">
             <div className="flex items-center gap-4 text-xs">
+              {/* Trade Signal Legends */}
               <div className="flex items-center gap-1.5">
                 <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-green-500"></div>
                 <span className="text-gray-700 font-semibold">BUY</span>
@@ -200,23 +312,78 @@ export function BacktestResults({ result, isLoading }: Props) {
                 <span className="text-gray-700 font-semibold">SL</span>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-orange-500"></div>
-                <span className="text-gray-700 font-semibold">EXIT</span>
-              </div>
+              {/* 🔥 IMPROVED: AI Prediction Legend - Shows all types with detailed info */}
+              {result.config.advancedOptions.useAIPrediction &&
+                showAIPredictions && (
+                  <>
+                    <div className="border-l border-gray-300 h-4"></div>
+                    <div className="flex items-center gap-3">
 
-              <div className="border-l border-gray-300 h-4"></div>
+                      {/* UP Prediction */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center">
+                          <span className="text-white text-[9px] font-bold">
+                            U
+                          </span>
+                        </div>
+                        <span className="text-[8px] text-gray-700 font-semibold">
+                          UP
+                        </span>
+                        <span className="text-[7px] text-green-600">
+                          ✓ Entry
+                        </span>
+                      </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-6 h-0.5 bg-blue-500"></div>
-                  <span className="text-gray-600 text-[10px]">MA20</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-6 h-0.5 bg-orange-500"></div>
-                  <span className="text-gray-600 text-[10px]">MA50</span>
-                </div>
-              </div>
+                      {/* NEUTRAL Prediction */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="w-6 h-6 rounded-full bg-gray-500 border-2 border-white shadow flex items-center justify-center">
+                          <span className="text-white text-[9px] font-bold">
+                            N
+                          </span>
+                        </div>
+                        <span className="text-[8px] text-gray-700 font-semibold">
+                          NEUTRAL
+                        </span>
+                        <span className="text-[7px] text-gray-600">
+                          ✓ Entry
+                        </span>
+                      </div>
+
+                      {/* DOWN Prediction */}
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-white shadow flex items-center justify-center">
+                          <span className="text-white text-[9px] font-bold">
+                            D
+                          </span>
+                        </div>
+                        <span className="text-[8px] text-gray-700 font-semibold">
+                          DOWN
+                        </span>
+                        <span className="text-[7px] text-red-600">
+                          ✗ Blocked
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+              {/* Indicator Legends */}
+              {legendIndicators.length > 0 && (
+                <>
+                  <div className="border-l border-gray-300 h-4"></div>
+                  {legendIndicators.map((ind, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <div
+                        className="w-8 h-0.5 rounded"
+                        style={{ backgroundColor: ind.color }}
+                      ></div>
+                      <span className="text-gray-700 text-[10px] font-semibold">
+                        {ind.label}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -314,10 +481,59 @@ export function BacktestResults({ result, isLoading }: Props) {
                     </div>
                   </div>
                 </div>
+
+                {/* 🔥 NEW: AI Stats Section */}
+                {result.config.advancedOptions.useAIPrediction &&
+                  aiPredictions.length > 0 && (
+                    <div className="pt-3 border-t border-gray-200">
+                      <div className="text-xs font-semibold text-purple-700 mb-2">
+                        AI Prediction Stats:
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        <div className="text-center">
+                          <div className="text-green-600 font-bold">
+                            {
+                              aiPredictions.filter((p) => p.direction === 'UP')
+                                .length
+                            }
+                          </div>
+                          <div className="text-gray-500">UP</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-gray-600 font-bold">
+                            {
+                              aiPredictions.filter(
+                                (p) => p.direction === 'NEUTRAL',
+                              ).length
+                            }
+                          </div>
+                          <div className="text-gray-500">NEUTRAL</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-red-600 font-bold">
+                            {
+                              aiPredictions.filter(
+                                (p) => p.direction === 'DOWN',
+                              ).length
+                            }
+                          </div>
+                          <div className="text-gray-500">DOWN</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[10px] text-gray-600 text-center">
+                        Blocked:{' '}
+                        {
+                          aiPredictions.filter((p) => p.direction === 'DOWN')
+                            .length
+                        }{' '}
+                        entries
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
 
-            {/* Right Column: Trade History Table với cả BUY và SELL */}
+            {/* Right Column: Trade History Table */}
             <div className="bg-white border border-gray-200 rounded-md">
               <h3
                 className={`text-[16px] text-black mb-3 font-bold pt-5 pl-5 ${pjs.className}`}
@@ -350,7 +566,6 @@ export function BacktestResults({ result, isLoading }: Props) {
                   </thead>
                   <tbody>
                     {allTrades.map((trade, i) => {
-                      // Tìm trade pair (BUY cho SELL hoặc ngược lại)
                       let relatedTrade = null;
                       if (trade.type === 'SELL') {
                         relatedTrade = result.trades.find(
@@ -361,7 +576,6 @@ export function BacktestResults({ result, isLoading }: Props) {
                         );
                       }
 
-                      // Xác định badge cho từng loại trade
                       let badgeClass = '';
                       let badgeText = '';
 
@@ -391,7 +605,6 @@ export function BacktestResults({ result, isLoading }: Props) {
                         badgeText = 'SELL';
                       }
 
-                      // Generate proper reason text
                       let reasonText = '';
                       if (trade.type === 'BUY') {
                         reasonText = trade.reason || 'Entry Signal';
@@ -407,7 +620,6 @@ export function BacktestResults({ result, isLoading }: Props) {
                         reasonText = trade.reason || 'Exit Signal';
                       }
 
-                      // Tính P&L cho hàng (chỉ hiển thị cho SELL)
                       const showPnl =
                         trade.type === 'SELL' && trade.pnl !== undefined;
 

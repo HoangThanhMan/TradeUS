@@ -1,4 +1,4 @@
-// src/types/backtest.types.ts
+// src/types/backtest.types.ts - UPDATED WITH INDICATOR COLORS
 
 /**
  * ==========================================
@@ -20,14 +20,15 @@ export interface BacktestConfig {
 }
 
 export interface AdvancedOptions {
-  splitCapital: boolean; // Split capital into multiple entries
-  useAIPrediction: boolean; // Only enter when AI predicts cross up
-  aiModelId?: string | null; // Which AI model to use (for admin)
+  splitCapital: boolean;
+  splitParts?: number;
+  useAIPrediction: boolean;
+  aiModelId?: string | null;
 }
 
 /**
  * ==========================================
- * STRATEGY TYPES
+ * STRATEGY TYPES - WITH COLOR SUPPORT
  * ==========================================
  */
 
@@ -36,25 +37,28 @@ export type StrategyType = 'template' | 'custom';
 export interface Strategy {
   type: StrategyType;
   name: string;
-  templateId?: string; // For predefined templates
-  conditions?: StrategyCondition[]; // For custom strategies
+  templateId?: string;
+  conditions?: StrategyCondition[];
 }
 
 export interface StrategyCondition {
   id: string;
   indicator1: IndicatorType;
-  indicator1Params?: number[]; // e.g., [20] for SMA(20)
+  indicator1Params?: number[];
+  indicator1Color?: string; // NEW: Color for indicator1 line
   action: ConditionAction;
-  indicator2: IndicatorType | number; // Can be another indicator or a value
+  indicator2: IndicatorType | number;
   indicator2Params?: number[];
-  logic?: 'AND' | 'OR'; // For chaining multiple conditions
+  indicator2Color?: string; // NEW: Color for indicator2 line
+  logic?: 'AND' | 'OR';
+  color?: string; // DEPRECATED: Use indicator1Color/indicator2Color instead
 }
 
-export type ConditionAction = 
-  | 'cross_above' 
-  | 'cross_below' 
-  | 'above' 
-  | 'below' 
+export type ConditionAction =
+  | 'cross_above'
+  | 'cross_below'
+  | 'above'
+  | 'below'
   | 'equals';
 
 export type IndicatorType =
@@ -69,7 +73,7 @@ export type IndicatorType =
   | 'BB_Lower'
   | 'Price'
   | 'Volume'
-  | 'Value'; // For static values like 30, 70
+  | 'Value';
 
 /**
  * ==========================================
@@ -96,32 +100,34 @@ export interface BacktestTrade {
   type: 'BUY' | 'SELL';
   timestamp: number;
   price: number;
-  amount: number; // Capital allocated
-  reason: string; // Why this trade was made
-  pnl?: number; // P&L for SELL trades
+  amount: number;
+  reason: string;
+  pnl?: number;
   pnlPercent?: number;
-  exitReason?: string; // 'strategy' | 'stop_loss' | 'take_profit'
+  exitReason?: string;
 }
 
 export interface BacktestResult {
   config: BacktestConfig;
   trades: BacktestTrade[];
+  aiPredictions?: AIPrediction[];
   summary: BacktestSummary;
   chartData: BacktestChartData;
-  executionTime: number; // milliseconds
+  executionTime: number;
+  indicators: Map<string, number[]>; // Pass indicators to frontend for rendering
 }
 
 export interface BacktestSummary {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
-  winRate: number; // percentage
+  winRate: number;
   totalPnL: number;
   totalPnLPercent: number;
   avgWin: number;
   avgLoss: number;
   maxDrawdown: number;
-  profitFactor: number; // gross profit / gross loss
+  profitFactor: number;
   sharpeRatio?: number;
   bestTrade: {
     pnl: number;
@@ -178,7 +184,7 @@ export interface AIPrediction {
   symbol: string;
   predictedPrice: number;
   direction: 'UP' | 'DOWN' | 'NEUTRAL';
-  confidence: number; // 0-1
+  confidence: number;
   modelId: string;
 }
 
@@ -228,7 +234,7 @@ export interface UploadAIModelResponse {
 
 /**
  * ==========================================
- * PREDEFINED STRATEGY TEMPLATES
+ * PREDEFINED STRATEGY TEMPLATES - 13 TOTAL
  * ==========================================
  */
 
@@ -236,18 +242,21 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
   {
     id: 'ma_cross',
     name: 'Moving Average Crossover',
-    description: 'Buy when fast MA crosses above slow MA, sell when crosses below',
+    description:
+      'Buy when fast MA crosses above slow MA, sell when crosses below',
     category: 'trend',
     conditions: [
       {
         id: '1',
         indicator1: 'SMA',
         indicator1Params: [10],
+        indicator1Color: '#F97316', // Orange
         action: 'cross_above',
         indicator2: 'SMA',
         indicator2Params: [20],
-      }
-    ]
+        indicator2Color: '#3B82F6', // Blue
+      },
+    ],
   },
   {
     id: 'bb_bounce',
@@ -258,26 +267,30 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
       {
         id: '1',
         indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
         action: 'cross_below',
         indicator2: 'BB_Lower',
-      }
-    ]
+        indicator2Color: '#EAB308', // Yellow
+      },
+    ],
   },
   {
     id: 'rsi_oversold',
     name: 'RSI Oversold/Overbought',
-    description: 'Buy when RSI < 30 (oversold), sell when RSI > 70 (overbought)',
+    description:
+      'Buy when RSI < 30 (oversold), sell when RSI > 70 (overbought)',
     category: 'momentum',
     conditions: [
       {
         id: '1',
         indicator1: 'RSI',
         indicator1Params: [14],
+        indicator1Color: '#A855F7', // Purple
         action: 'below',
         indicator2: 'Value',
         indicator2Params: [30],
-      }
-    ]
+      },
+    ],
   },
   {
     id: 'macd_cross',
@@ -288,10 +301,12 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
       {
         id: '1',
         indicator1: 'MACD',
+        indicator1Color: '#8B5CF6', // Violet
         action: 'cross_above',
         indicator2: 'MACD_Signal',
-      }
-    ]
+        indicator2Color: '#EC4899', // Pink
+      },
+    ],
   },
   {
     id: 'ema_trend',
@@ -302,20 +317,24 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
       {
         id: '1',
         indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
         action: 'above',
         indicator2: 'EMA',
         indicator2Params: [50],
+        indicator2Color: '#06B6D4', // Cyan
         logic: 'AND',
       },
       {
         id: '2',
         indicator1: 'EMA',
         indicator1Params: [50],
+        indicator1Color: '#06B6D4', // Cyan
         action: 'above',
         indicator2: 'EMA',
         indicator2Params: [200],
-      }
-    ]
+        indicator2Color: '#0EA5E9', // Sky
+      },
+    ],
   },
   {
     id: 'volume_breakout',
@@ -326,19 +345,173 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
       {
         id: '1',
         indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
         action: 'cross_above',
         indicator2: 'SMA',
         indicator2Params: [20],
+        indicator2Color: '#10B981', // Emerald
         logic: 'AND',
       },
       {
         id: '2',
         indicator1: 'Volume',
+        indicator1Color: '#14B8A6', // Teal
         action: 'above',
         indicator2: 'SMA',
         indicator2Params: [20],
-      }
-    ]
+        indicator2Color: '#059669',
+      },
+    ],
+  },
+  {
+    id: 'double_ma',
+    name: 'Triple MA Strategy',
+    description: 'Buy when 10 > 20 > 50 EMA alignment',
+    category: 'trend',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'EMA',
+        indicator1Params: [10],
+        indicator1Color: '#F97316', // Orange
+        action: 'above',
+        indicator2: 'EMA',
+        indicator2Params: [20],
+        indicator2Color: '#EAB308', // Yellow
+        logic: 'AND',
+      },
+      {
+        id: '2',
+        indicator1: 'EMA',
+        indicator1Params: [20],
+        indicator1Color: '#EAB308', // Yellow
+        action: 'above',
+        indicator2: 'EMA',
+        indicator2Params: [50],
+        indicator2Color: '#22C55E', // Green
+      },
+    ],
+  },
+  {
+    id: 'rsi_bb_combo',
+    name: 'RSI + BB Combo',
+    description: 'Buy when RSI oversold AND price at lower BB',
+    category: 'momentum',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'RSI',
+        indicator1Params: [14],
+        indicator1Color: '#A855F7', // Purple
+        action: 'below',
+        indicator2: 'Value',
+        indicator2Params: [35],
+        logic: 'AND',
+      },
+      {
+        id: '2',
+        indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
+        action: 'below',
+        indicator2: 'BB_Lower',
+        indicator2Params: [20],
+        indicator2Color: '#EAB308', // Yellow
+      },
+    ],
+  },
+  {
+    id: 'macd_rsi',
+    name: 'MACD + RSI Filter',
+    description: 'MACD cross with RSI confirmation',
+    category: 'momentum',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'MACD',
+        indicator1Color: '#8B5CF6', // Violet
+        action: 'cross_above',
+        indicator2: 'MACD_Signal',
+        indicator2Color: '#EC4899', // Pink
+        logic: 'AND',
+      },
+      {
+        id: '2',
+        indicator1: 'RSI',
+        indicator1Params: [14],
+        indicator1Color: '#A855F7', // Purple
+        action: 'above',
+        indicator2: 'Value',
+        indicator2Params: [50],
+      },
+    ],
+  },
+  {
+    id: 'bb_squeeze',
+    name: 'BB Squeeze Breakout',
+    description: 'Buy when BB bands contract then expand',
+    category: 'volatility',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
+        action: 'cross_above',
+        indicator2: 'BB_Upper',
+        indicator2Params: [20],
+        indicator2Color: '#EAB308', // Yellow
+      },
+    ],
+  },
+  {
+    id: 'support_bounce',
+    name: 'Support Bounce',
+    description: 'Buy when price bounces from 200 EMA support',
+    category: 'trend',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
+        action: 'cross_above',
+        indicator2: 'EMA',
+        indicator2Params: [200],
+        indicator2Color: '#3B82F6', // Blue
+      },
+    ],
+  },
+  {
+    id: 'momentum_surge',
+    name: 'Momentum Surge',
+    description: 'Buy when RSI crosses above 50 (momentum shift)',
+    category: 'momentum',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'RSI',
+        indicator1Params: [14],
+        indicator1Color: '#A855F7', // Purple
+        action: 'cross_above',
+        indicator2: 'Value',
+        indicator2Params: [50],
+      },
+    ],
+  },
+  {
+    id: 'volatility_contraction',
+    name: 'Low Volatility Entry',
+    description: 'Buy when BB bands are tight (low volatility)',
+    category: 'volatility',
+    conditions: [
+      {
+        id: '1',
+        indicator1: 'Price',
+        indicator1Color: '#22C55E', // Green
+        action: 'above',
+        indicator2: 'BB_Middle',
+        indicator2Params: [20],
+        indicator2Color: '#EAB308', // Yellow
+      },
+    ],
   },
 ];
 
@@ -450,4 +623,21 @@ export const INDICATOR_METADATA: Record<IndicatorType, IndicatorMetadata> = {
     requiresParams: true,
     defaultParams: [50],
   },
+};
+
+/**
+ * ==========================================
+ * DEFAULT STRATEGY CONDITION
+ * ==========================================
+ */
+
+export const DEFAULT_STRATEGY_CONDITION: StrategyCondition = {
+  id: '1',
+  indicator1: 'SMA',
+  indicator1Params: [20],
+  indicator1Color: '#F97316', // Orange
+  action: 'cross_above',
+  indicator2: 'SMA',
+  indicator2Params: [50],
+  indicator2Color: '#3B82F6', // Blue
 };
