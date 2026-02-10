@@ -5,7 +5,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { useChartData } from '../../../src/hooks/useChartData';
 import { useDrawingManager } from '../../../src/hooks/useDrawingManager';
-import { applySettings, DEFAULT_CHART_SETTINGS, ChartSettings } from '../../../src/hooks/useChartSettings';
+import {
+  applySettings,
+  DEFAULT_CHART_SETTINGS,
+  ChartSettings,
+} from '../../../src/hooks/useChartSettings';
 import { KLineChart } from '../../../src/components/chart-tools/KLineChart';
 import { Sidebar } from '../../../src/components/toolbars/LeftSidebar';
 import { ChartToolbar } from '../../../src/components/toolbars/ChartToolbar';
@@ -25,8 +29,8 @@ interface TimeframeChartInstanceProps {
   connected: boolean;
   chartNumber: number;
   onTimeframeChange?: (newTimeframe: string) => void;
-  settings?: ChartSettings; // 🔥 NEW: Accept settings from parent
-  onSettingsChange?: (newSettings: ChartSettings) => void; // 🔥 NEW: Settings change handler
+  settings?: ChartSettings;
+  onSettingsChange?: (newSettings: ChartSettings) => void;
 }
 
 const pjs = Plus_Jakarta_Sans({
@@ -50,14 +54,17 @@ export function TimeframeChartInstance({
     interval,
   );
   const chartInstanceRef = useRef<any>(null);
-  const chartContainerRef = useRef<HTMLDivElement>(null); // 🔥 NEW: For fullscreen/screenshot
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
   const [showIndicatorModal, setShowIndicatorModal] = useState(false);
   const [chartType, setChartType] = useState('candle_solid');
 
-  // 🔥 NEW: Local settings state
+  // ✅ THÊM: Timezone state
+  const [selectedTimezone, setSelectedTimezone] = useState<string>('UTC');
+
+  // Local settings state
   const [localSettings, setLocalSettings] = useState<ChartSettings>(
-    initialSettings || DEFAULT_CHART_SETTINGS
+    initialSettings || DEFAULT_CHART_SETTINGS,
   );
 
   const {
@@ -78,19 +85,24 @@ export function TimeframeChartInstance({
     clearFibonacci,
   } = useDrawingManager(chartInstanceRef.current);
 
-  // 🔥 NEW: Apply settings to chart instance
+  // Apply settings to chart instance
   useEffect(() => {
     if (chartInstanceRef.current && localSettings) {
       applySettings(chartInstanceRef.current, localSettings);
     }
   }, [localSettings]);
 
-  // 🔥 NEW: Settings change handler
+  // Settings change handler
   const handleSettingsChange = (newSettings: ChartSettings) => {
     setLocalSettings(newSettings);
     if (onSettingsChange) {
       onSettingsChange(newSettings);
     }
+  };
+
+  // ✅ THÊM: Timezone change handler
+  const handleTimezoneChange = (newTimezone: string) => {
+    setSelectedTimezone(newTimezone);
   };
 
   useEffect(() => {
@@ -199,7 +211,7 @@ export function TimeframeChartInstance({
 
   return (
     <div
-      ref={chartContainerRef} // 🔥 NEW: Attach ref for fullscreen/screenshot
+      ref={chartContainerRef}
       className={`w-full h-full flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden relative ${pjs.className}`}
     >
       {/* Header */}
@@ -250,17 +262,19 @@ export function TimeframeChartInstance({
 
         {/* Chart Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* 🔥 UPDATED: Chart Toolbar with full feature integration */}
+          {/* ✅ UPDATED: Thêm selectedTimezone và onTimezoneChange */}
           <ChartToolbar
             symbol={symbol}
             timeframe={interval}
             chartType={chartType}
-            chartContainerRef={chartContainerRef} // 🔥 NEW: Pass ref for fullscreen/screenshot
-            settings={localSettings} // 🔥 NEW: Pass settings
+            chartContainerRef={chartContainerRef}
+            settings={localSettings}
+            selectedTimezone={selectedTimezone}
             onSymbolChange={handleSymbolChange}
             onTimeframeChange={handleTimeframeChange}
             onChartTypeChange={setChartType}
-            onSettingsChange={handleSettingsChange} // 🔥 NEW: Pass settings handler
+            onTimezoneChange={handleTimezoneChange}
+            onSettingsChange={handleSettingsChange}
             onIndicatorClick={handleIndicatorClick}
           />
 

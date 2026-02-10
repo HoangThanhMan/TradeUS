@@ -203,7 +203,7 @@ services:
       PORT: 8004
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       REDIS_URL: redis://redis:6379
-      ALERT_COOLDOWN_SECONDS: 300
+      ALERT_COOLDOWN_SECONDS: 5
       SUBSCRIPTION_SERVICE_URL: http://symbol-subscription-service:8005
       EMAIL_EXCHANGE: email.exchange
       EMAIL_ROUTING_KEY: email.send.alert

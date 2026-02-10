@@ -207,7 +207,7 @@ export default function ProfileSettingsPage() {
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex flex-row items-center gap-2">
                 <svg
-                  className="w-6 h-6 text-gray-600"
+                  className="w-6 h-6 text-gray-600 "
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -220,7 +220,7 @@ export default function ProfileSettingsPage() {
                   />
                 </svg>
                 <div>
-                  <h2 className="text-[16px] font-semibold text-gray-900">
+                  <h2 className="text-[16px] font-semibold text-gray-900 ">
                     Account Information
                   </h2>{' '}
                   <p className="text-gray-500 text-[13px]">

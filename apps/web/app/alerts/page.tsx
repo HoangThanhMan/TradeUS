@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/src/components/page/Header';
 import {
   useAlertNotification,
-  AnyNotification,
+  type AnyNotification,
 } from '../../src/contexts/AlertNotificationContext';
 import {
   sentimentService,
@@ -66,10 +66,14 @@ export default function NotificationCenterPage() {
   const [badNews, setBadNews] = useState<SentimentApiResponse[]>([]);
   const [loadingBadNews, setLoadingBadNews] = useState(true);
 
+  // ✅ Filter chỉ lấy email notifications
+  const emailNotifications = allNotifications.filter(
+    (n) => n._kind === 'email',
+  );
+
   useEffect(() => {
     const token =
-      sessionStorage.getItem('accessToken') ||
-      sessionStorage.getItem('token');
+      sessionStorage.getItem('accessToken') || sessionStorage.getItem('token');
     if (!token) {
       router.push('/auth');
     }
@@ -110,8 +114,8 @@ export default function NotificationCenterPage() {
           {/* Page Header */}
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <IconBell className="w-6 h-6 text-indigo-600" />
+              <div className="p-2  rounded-lg">
+                <IconBell className="w-7.5 h-7.5 text-gray-700" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
@@ -124,7 +128,8 @@ export default function NotificationCenterPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {allNotifications.length > 0 && (
+              {/* ✅ Chỉ hiện nút Clear khi có email notifications */}
+              {emailNotifications.length > 0 && (
                 <button
                   onClick={clearAll}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors border border-gray-200 rounded-lg hover:border-red-200"
@@ -152,13 +157,12 @@ export default function NotificationCenterPage() {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4 mb-6">
+            {/* ✅ Đổi Total Events thành Email Events */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
               <p className="text-2xl font-bold text-gray-900">
-                {allNotifications.length}
+                {emailNotifications.length}
               </p>
-              <p className="text-xs text-gray-500 font-medium">
-                Total Events
-              </p>
+              <p className="text-xs text-gray-500 font-medium">Email Events</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-4 text-center">
               <p className="text-2xl font-bold text-amber-600">
@@ -172,9 +176,7 @@ export default function NotificationCenterPage() {
               <p className="text-2xl font-bold text-red-600">
                 {badNews.length}
               </p>
-              <p className="text-xs text-red-600 font-medium">
-                Bad News Today
-              </p>
+              <p className="text-xs text-red-600 font-medium">Bad News Today</p>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-4 text-center">
               <p className="text-2xl font-bold text-emerald-600">
@@ -199,56 +201,64 @@ export default function NotificationCenterPage() {
                 onClick={fetchBadNews}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-100 rounded-md transition-colors"
               >
-                <IconRefresh className={`w-3.5 h-3.5 ${loadingBadNews ? 'animate-spin' : ''}`} />
+                <IconRefresh
+                  className={`w-3.5 h-3.5 ${loadingBadNews ? 'animate-spin' : ''}`}
+                />
                 Refresh
               </button>
             </div>
 
-            {loadingBadNews ? (
-              <div className="text-center py-10 text-gray-400">
-                <IconRefresh className="w-8 h-8 mx-auto mb-2 animate-spin opacity-30" />
-                <p className="text-sm">Loading today&apos;s news…</p>
-              </div>
-            ) : badNews.length === 0 ? (
-              <div className="text-center py-10 text-gray-400">
-                <IconCheck className="w-10 h-10 mx-auto mb-2 opacity-20 text-green-500" />
-                <p className="text-sm font-medium text-green-600">
-                  No bad news today!
-                </p>
-                <p className="text-xs mt-1">
-                  All sentiment analyses so far today are neutral or positive.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-red-50">
-                {badNews.map((item) => (
-                  <BadNewsRow key={item.id} item={item} />
-                ))}
-              </div>
-            )}
+            {/* ✅ THÊM max-h và overflow-y-auto Ở ĐÂY */}
+            <div className="max-h-120 overflow-y-auto">
+              {loadingBadNews ? (
+                <div className="text-center py-10 text-gray-400">
+                  <IconRefresh className="w-8 h-8 mx-auto mb-2 animate-spin opacity-30" />
+                  <p className="text-sm">Loading today&apos;s news…</p>
+                </div>
+              ) : badNews.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <IconCheck className="w-10 h-10 mx-auto mb-2 opacity-20 text-green-500" />
+                  <p className="text-sm font-medium text-green-600">
+                    No bad news today!
+                  </p>
+                  <p className="text-xs mt-1">
+                    All sentiment analyses so far today are neutral or positive.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-red-50">
+                  {badNews.map((item) => (
+                    <BadNewsRow key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Notification Feed */}
+          {/* ✅ Email Activity Feed - CHỈ HIỂN THỊ EMAIL */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
               <h2 className="text-sm font-semibold text-gray-900">
-                Activity Feed
+                Email Activity Feed
               </h2>
             </div>
 
-            {allNotifications.length === 0 ? (
+            {emailNotifications.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
-                <IconBell className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p className="text-sm font-medium">No notifications yet</p>
+                <IconMail className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-medium">
+                  No email notifications yet
+                </p>
                 <p className="text-xs mt-1 max-w-xs mx-auto">
-                  Subscribe to symbols on the Dashboard to receive real-time
-                  sentiment alerts and email delivery updates.
+                  Email delivery status will appear here when alerts are sent to
+                  your email address.
                 </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {allNotifications.map((n, i) => (
-                  <NotificationRow key={i} notification={n} />
+                {/* ✅ CHỈ hiển thị email notifications */}
+                {emailNotifications.map((n, i) => (
+                  <EmailNotificationRow key={i} notification={n} />
                 ))}
               </div>
             )}
@@ -285,10 +295,9 @@ export default function NotificationCenterPage() {
                   3
                 </span>
                 <p>
-                  Alerts are pushed to this page via{' '}
-                  <strong>WebSocket</strong> (the 🔔 bell icon shows a red
-                  badge), and email alerts are delivered by the{' '}
-                  <strong>Email Service</strong> via RabbitMQ.
+                  Alerts are pushed to this page via <strong>WebSocket</strong>{' '}
+                  (the 🔔 bell icon shows a red badge), and email alerts are
+                  delivered by the <strong>Email Service</strong> via RabbitMQ.
                 </p>
               </div>
             </div>
@@ -299,61 +308,15 @@ export default function NotificationCenterPage() {
   );
 }
 
-/* ─── Notification Row ─────────────────────────────── */
-function NotificationRow({
+/* ─── Email Notification Row (CHỈ HIỂN THỊ EMAIL) ─────── */
+function EmailNotificationRow({
   notification: n,
 }: {
   notification: AnyNotification;
 }) {
-  if (n._kind === 'alert') {
-    const isBearish = n.sentiment < 0;
-    return (
-      <div className="flex gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
-        <div
-          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-            isBearish ? 'bg-red-100' : 'bg-green-100'
-          }`}
-        >
-          <IconAlertTriangle
-            className={`w-5 h-5 ${isBearish ? 'text-red-600' : 'text-green-600'}`}
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-900">
-                {n.symbol}
-              </span>
-              <span
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  isBearish
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-green-100 text-green-700'
-                }`}
-              >
-                {n.sentiment_label} ({n.sentiment?.toFixed(2)})
-              </span>
-            </div>
-            <span className="text-xs text-gray-400">
-              {timeAgo(n._timestamp)}
-            </span>
-          </div>
-          {n.title && (
-            <p className="text-sm text-gray-700 mt-1">{n.title}</p>
-          )}
-          {n.reason && (
-            <p className="text-xs text-gray-500 mt-0.5">{n.reason}</p>
-          )}
-          <p className="text-[10px] text-gray-400 mt-1">
-            {n.notified_count ?? 0} user(s) notified ·{' '}
-            {formatTime(n._timestamp)}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Type guard - chỉ render nếu là email
+  if (n._kind !== 'email') return null;
 
-  // Email status notification
   const isSent = n.status === 'sent';
   return (
     <div className="flex gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
@@ -376,9 +339,7 @@ function NotificationRow({
               Email {isSent ? 'delivered' : 'failed'}
             </span>
           </div>
-          <span className="text-xs text-gray-400">
-            {timeAgo(n._timestamp)}
-          </span>
+          <span className="text-xs text-gray-400">{timeAgo(n._timestamp)}</span>
         </div>
         <p className="text-sm text-gray-700 mt-0.5 truncate">
           {n.subject || 'No subject'}
@@ -419,7 +380,7 @@ function BadNewsRow({ item }: { item: SentimentApiResponse }) {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-red-600 hover:underline"
+                className="hover:text-red-600 font-semibold hover:underline"
               >
                 {item.title}
               </a>

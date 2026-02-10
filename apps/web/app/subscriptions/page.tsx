@@ -8,7 +8,15 @@ import {
   Subscription,
 } from '../../src/services/subscription.service';
 import { Plus_Jakarta_Sans } from 'next/font/google';
-import { IconBell, IconBellOff, IconPlus, IconTrash, IconMail, IconMailOff } from '@tabler/icons-react';
+import {
+  IconBell,
+  IconBellOff,
+  IconPlus,
+  IconTrash,
+  IconMail,
+  IconMailOff,
+  IconScribble,
+} from '@tabler/icons-react';
 import { useAlertNotification } from '../../src/contexts/AlertNotificationContext';
 
 const pjs = Plus_Jakarta_Sans({
@@ -124,8 +132,8 @@ export default function SubscriptionsPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <IconBell className="w-6 h-6 text-indigo-600" />
+              <div className="p-2  rounded-lg">
+                <IconBell className="w-7.5 h-7.5 text-gray-700" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
@@ -152,33 +160,76 @@ export default function SubscriptionsPage() {
 
           {/* Custom Symbol */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
+            <h2 className="text-[16px] flex items-center font-semibold text-gray-900 mb-3">
+              <div
+                className={`p-2 mr-3 rounded-lg ${emailEnabled ? 'bg-blue-100' : 'bg-blue-100'}`}
+              >
+                <IconScribble className="w-5 h-5 text-blue-600 flex flex-col" />
+              </div>
               Subscribe to a symbol
             </h2>
-            <form onSubmit={handleCustomSubscribe} className="flex gap-3">
+            <form onSubmit={handleCustomSubscribe} className="flex gap-3 mb-5">
               <input
                 type="text"
                 placeholder="Enter symbol (e.g. BTCUSDT)"
                 value={customSymbol}
                 onChange={(e) => setCustomSymbol(e.target.value.toUpperCase())}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="flex-1 placeholder-black placeholder:text-[12px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
                 type="submit"
                 disabled={!customSymbol.trim() || actionLoading !== null}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <IconPlus className="w-4 h-4" />
-                Subscribe
+                <div className="text-[12px]">Subscribe</div>
               </button>
             </form>
+            {/* Popular Symbols */}
+            <div className="bg-white rounded-xl mb-6">
+              <h2 className="text-[12px] font-medium text-gray-900 mb-3">
+                Popular Symbols
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {POPULAR_SYMBOLS.map((symbol) => {
+                  const subscribed = isSubscribed(symbol);
+                  return (
+                    <button
+                      key={symbol}
+                      onClick={() =>
+                        subscribed
+                          ? handleUnsubscribe(symbol)
+                          : handleSubscribe(symbol)
+                      }
+                      disabled={actionLoading === symbol}
+                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[12px] font-medium transition-colors ${
+                        subscribed
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200'
+                          : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200'
+                      } disabled:opacity-50`}
+                    >
+                      {actionLoading === symbol ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                      ) : subscribed ? (
+                        <IconBellOff className="w-4 h-4" />
+                      ) : (
+                        <IconBell className="w-4 h-4" />
+                      )}
+                      {symbol}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Email Notification Setting */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${emailEnabled ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                <div
+                  className={`p-2 rounded-lg ${emailEnabled ? 'bg-emerald-100' : 'bg-gray-100'}`}
+                >
                   {emailEnabled ? (
                     <IconMail className="w-5 h-5 text-emerald-600" />
                   ) : (
@@ -190,7 +241,8 @@ export default function SubscriptionsPage() {
                     Email Notifications
                   </h2>
                   <p className="text-xs text-gray-500">
-                    Receive email alerts when sentiment changes for your subscribed symbols
+                    Receive email alerts when sentiment changes for your
+                    subscribed symbols
                   </p>
                 </div>
               </div>
@@ -209,46 +261,10 @@ export default function SubscriptionsPage() {
             </div>
             {emailEnabled && (
               <p className="mt-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                ✓ Email alerts are enabled. When negative news is detected, the Email Service will send you an alert via RabbitMQ.
+                ✓ Email alerts are enabled. When negative news is detected, the
+                Email Service will send you an alert via RabbitMQ.
               </p>
             )}
-          </div>
-
-          {/* Popular Symbols */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
-              Popular Symbols
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {POPULAR_SYMBOLS.map((symbol) => {
-                const subscribed = isSubscribed(symbol);
-                return (
-                  <button
-                    key={symbol}
-                    onClick={() =>
-                      subscribed
-                        ? handleUnsubscribe(symbol)
-                        : handleSubscribe(symbol)
-                    }
-                    disabled={actionLoading === symbol}
-                    className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      subscribed
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200'
-                        : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200'
-                    } disabled:opacity-50`}
-                  >
-                    {actionLoading === symbol ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                    ) : subscribed ? (
-                      <IconBellOff className="w-4 h-4" />
-                    ) : (
-                      <IconBell className="w-4 h-4" />
-                    )}
-                    {symbol}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Current Subscriptions */}
@@ -273,10 +289,10 @@ export default function SubscriptionsPage() {
                     className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg"
                   >
                     <div>
-                      <span className="font-semibold text-gray-900 text-sm">
+                      <span className="font-semibold text-gray-900 text-[13px]">
                         {sub.symbol}
                       </span>
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-gray-500 ml-2 text-[10px]">
                         since{' '}
                         {new Date(sub.created_at).toLocaleDateString('en-US', {
                           year: 'numeric',
@@ -295,7 +311,7 @@ export default function SubscriptionsPage() {
                       ) : (
                         <IconTrash className="w-4 h-4" />
                       )}
-                      Remove
+                      
                     </button>
                   </div>
                 ))}

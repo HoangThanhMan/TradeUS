@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
 
     # Cooldown: minimum seconds between two alerts for the same user+symbol
-    alert_cooldown_seconds: int = 300
+    alert_cooldown_seconds: int = 5
 
     # Subscription service (HTTP)
     subscription_service_url: str = "http://localhost:8005"

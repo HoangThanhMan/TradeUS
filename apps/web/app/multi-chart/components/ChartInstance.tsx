@@ -57,6 +57,9 @@ export function ChartInstance({
   const [volPaneId, setVolPaneId] = useState<string | null>(null);
   const [chartType, setChartType] = useState('candle_solid');
 
+  // ✅ THÊM: Timezone state
+  const [selectedTimezone, setSelectedTimezone] = useState<string>('UTC');
+
   // Local settings state initialized from config or defaults
   const [localSettings, setLocalSettings] = useState<ChartSettings>(
     config.settings || DEFAULT_CHART_SETTINGS,
@@ -91,6 +94,11 @@ export function ChartInstance({
   const handleSettingsChange = (newSettings: ChartSettings) => {
     setLocalSettings(newSettings);
     onUpdateChart(config.id, { settings: newSettings });
+  };
+
+  // ✅ THÊM: Timezone change handler
+  const handleTimezoneChange = (newTimezone: string) => {
+    setSelectedTimezone(newTimezone);
   };
 
   useEffect(() => {
@@ -155,16 +163,18 @@ export function ChartInstance({
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* 🔥 INTEGRATED: Full ChartToolbar with all features */}
+          {/* ✅ UPDATED: Thêm selectedTimezone và onTimezoneChange */}
           <ChartToolbar
             symbol={config.symbol}
             timeframe={config.interval}
             chartType={chartType}
             chartContainerRef={chartContainerRef}
             settings={localSettings}
+            selectedTimezone={selectedTimezone}
             onSymbolChange={handleSymbolChange}
             onTimeframeChange={handleTimeframeChange}
             onChartTypeChange={setChartType}
+            onTimezoneChange={handleTimezoneChange}
             onSettingsChange={handleSettingsChange}
             onIndicatorClick={handleIndicatorClick}
           />
