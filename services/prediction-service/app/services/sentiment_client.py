@@ -81,12 +81,12 @@ class SentimentClient:
         """
         Get average sentiment for a symbol over a time period.
         
-        Args:
-            symbol: Trading symbol
+        Arsymbol
             hours: Number of hours to average over
             
         Returns:
-            Average sentiment score or None
+            Average sentiment score or Nonegs:
+            symbol: Trading 
         """
         try:
             client = await self._get_client()

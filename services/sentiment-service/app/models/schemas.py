@@ -51,6 +51,11 @@ class NewsInput(BaseModel):
         description="Publication date of the news article",
         examples=["2026-01-05T10:30:00Z"]
     )
+    symbol_hint: Optional[str] = Field(
+        None,
+        description="Optional symbol hint from the news source (e.g., BTC-USD). Used to improve symbol detection accuracy.",
+        examples=["BTC-USD", "BTCUSDT"]
+    )
 
     @field_validator("link")
     @classmethod

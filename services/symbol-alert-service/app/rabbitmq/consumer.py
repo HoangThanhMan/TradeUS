@@ -82,6 +82,7 @@ class AlertConsumer:
             sentiment = data.get("sentiment", data.get("sentiment_score", 0))
             title = data.get("title", "")
             reason = data.get("reason", data.get("message", ""))
+            link = data.get("link", "")
 
             logger.info(f"Alert received: {symbol} sentiment={sentiment}")
 
@@ -93,6 +94,7 @@ class AlertConsumer:
                 sentiment=sentiment,
                 title=title,
                 reason=reason,
+                link=link,
             )
 
         except Exception as e:

@@ -49,6 +49,7 @@ async def dispatch_alert(
     sentiment: float,
     title: str,
     reason: str,
+    link: str = "",
 ) -> int:
     """
     Look up subscribers for `symbol`, apply cooldown, and send email requests.
@@ -59,7 +60,7 @@ async def dispatch_alert(
     if not subscribers:
         logger.info(f"No subscribers for {symbol}, skipping alert")
         # Still publish alert event to ws-gateway for real-time display
-        await _publish_alert_notification(symbol, sentiment, title, reason, 0)
+        await _publish_alert_notification(symbol, sentiment, title, reason, 0, link)
         return 0
 
     logger.info(f"Found {len(subscribers)} subscriber(s) for {symbol}")
@@ -77,14 +78,14 @@ async def dispatch_alert(
             logger.warning(f"Could not find email for user {user_id}, skipping")
             continue
 
-        await _publish_email_request(email, user_id, symbol, sentiment, title, reason)
+        await _publish_email_request(email, user_id, symbol, sentiment, title, reason, link)
         await set_cooldown(user_id, symbol)
         sent_count += 1
 
     logger.info(f"Dispatched {sent_count} alert email(s) for {symbol}")
 
     # 3. Publish alert notification to ws-gateway via alert.exchange
-    await _publish_alert_notification(symbol, sentiment, title, reason, sent_count)
+    await _publish_alert_notification(symbol, sentiment, title, reason, sent_count, link)
 
     return sent_count
 
@@ -110,6 +111,7 @@ async def _publish_email_request(
     sentiment: float,
     title: str,
     reason: str,
+    link: str = "",
 ) -> None:
     """Publish an email request message to the email exchange."""
     try:
@@ -118,12 +120,14 @@ async def _publish_email_request(
         )
 
         sentiment_label = "TÍCH CỰC 📈" if sentiment > 0 else "TIÊU CỰC 📉"
+        link_html = f'<p><b>Bài báo gốc:</b> <a href="{link}">{link}</a></p>' if link else ""
         email_body = (
             f"<h2>Cảnh báo {symbol}: {sentiment_label}</h2>"
             f"<p><b>Tiêu đề:</b> {title}</p>"
             f"<p><b>Phân tích:</b> {reason}</p>"
             f"<p><b>Điểm sentiment:</b> {sentiment:.2f}</p>"
-            f"<hr><p><i>Trade-X Alert System</i></p>"
+            f"{link_html}"
+            f"<hr><p><i>USTrading Alert System</i></p>"
         )
 
         payload = {
@@ -132,7 +136,7 @@ async def _publish_email_request(
             "source": "symbol-alert-service",
             "data": {
                 "to": email,
-                "subject": f"[Trade-X] {symbol} – {sentiment_label}",
+                "subject": f"[USTrading] {symbol} – {sentiment_label}",
                 "body": email_body,
             },
         }
@@ -155,6 +159,7 @@ async def _publish_alert_notification(
     title: str,
     reason: str,
     notified_count: int,
+    link: str = "",
 ) -> None:
     """Publish an alert notification to alert.exchange for ws-gateway to push to frontend."""
     try:
@@ -174,6 +179,7 @@ async def _publish_alert_notification(
                 "sentiment_label": sentiment_label,
                 "title": title,
                 "reason": reason,
+                "link": link,
                 "notified_count": notified_count,
             },
         }

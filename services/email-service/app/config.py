@@ -41,9 +41,9 @@ class Settings(BaseSettings):
     # Gmail SMTP
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
-    smtp_username: str = ""  # Gmail address
-    smtp_password: str = ""  # Gmail App Password (16 chars)
-    smtp_from_email: str = ""  # Auto-filled from smtp_username if empty
+    smtp_username: str = "man994412@gmail.com"  # Gmail address
+    smtp_password: str = "wfqzjfqhjsorcrjn"  # Gmail App Password (16 chars)
+    smtp_from_email: str = "USTrading"  # Auto-filled from smtp_username if empty
     smtp_from_name: str = "USTrading"
 
     # Email strategy: smtp (Gmail) | console (dev)
