@@ -271,11 +271,21 @@ class CollectorScheduler:
             
             async for doc in cursor:
                 try:
+                    # Extract symbol hint from metadata if available
+                    metadata = doc.get("metadata", {})
+                    raw_symbol = metadata.get("symbol", None)
+                    
+                    # Convert Yahoo symbol format (BTC-USD) to TradeX format (BTCUSDT)
+                    symbol_hint = None
+                    if raw_symbol:
+                        symbol_hint = self._convert_yahoo_symbol(raw_symbol)
+                    
                     news_input = NewsInput(
                         title=doc["title"],
                         content=doc["content"],
                         link=doc["link"],
-                        published_date=doc["published_at"]
+                        published_date=doc["published_at"],
+                        symbol_hint=symbol_hint,
                     )
                     
                     # Analyze sentiment
@@ -329,6 +339,26 @@ class CollectorScheduler:
         except Exception as e:
             logger.error(f"Error publishing sentiment result: {e}")
     
+    @staticmethod
+    def _convert_yahoo_symbol(yahoo_symbol: str) -> str:
+        """Convert Yahoo Finance symbol (e.g., BTC-USD) to TradeX format (e.g., BTCUSDT)."""
+        symbol_map = {
+            "BTC-USD": "BTCUSDT",
+            "ETH-USD": "ETHUSDT",
+            "BNB-USD": "BNBUSDT",
+            "SOL-USD": "SOLUSDT",
+            "XRP-USD": "XRPUSDT",
+            "ADA-USD": "ADAUSDT",
+            "DOGE-USD": "DOGEUSDT",
+            "DOT-USD": "DOTUSDT",
+            "MATIC-USD": "MATICUSDT",
+            "AVAX-USD": "AVAXUSDT",
+        }
+        upper = yahoo_symbol.upper()
+        if upper in symbol_map:
+            return symbol_map[upper]
+        return upper.replace("-", "").replace("USD", "USDT")
+
     async def _publish_collection_result(self, result: CollectionResult) -> None:
         """Publish collection result to RabbitMQ for monitoring."""
         if not settings.enable_rabbitmq:

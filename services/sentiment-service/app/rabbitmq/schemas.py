@@ -90,6 +90,7 @@ class SentimentAlertData(BaseModel):
     message: str = Field(..., description="Alert message")
     title: str = Field("", description="Original article title")
     reason: str = Field("", description="Analysis reasoning")
+    link: str = Field("", description="Original article link")
     threshold: float = Field(..., description="Threshold that was exceeded")
 
 

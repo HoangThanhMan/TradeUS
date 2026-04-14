@@ -10,9 +10,9 @@ async function seedAdmin() {
   
   const usersService = app.get(UsersService);
   
-  const adminEmail = 'admin@tradex.com';
+  const adminEmail = 'admin@ustrading.com';
   const adminPassword = 'Admin@123456';
-  const adminUsername = 'superadmin';
+  const adminUsername = 'ustrading';
   
   try {
     // Check if admin exists
@@ -36,8 +36,9 @@ async function seedAdmin() {
       });
       
       // Get the user ID from the created user - try multiple ways
-      const userId = (admin as any)._id?.toString() || (admin as any).id?.toString();
-      console.log('Created admin object:', JSON.stringify(admin, null, 2));
+      const userId = (admin as any)._id?.toString() 
+        || (admin as any).id?.toString()
+        || (admin as any)._doc?._id?.toString();
       
       if (userId) {
         // Update role to ADMIN

@@ -140,6 +140,7 @@ class SentimentPublisher:
                     message=f"Extreme sentiment detected: {reason[:100]}",
                     title=title,
                     reason=reason,
+                    link=link,
                 )
             
             return True
@@ -157,6 +158,7 @@ class SentimentPublisher:
         message: str,
         title: str = "",
         reason: str = "",
+        link: str = "",
     ) -> bool:
         """
         Publish a sentiment alert (extreme sentiment detected).
@@ -192,6 +194,7 @@ class SentimentPublisher:
                     message=message,
                     title=title,
                     reason=reason,
+                    link=link,
                     threshold=settings.sentiment_alert_threshold,
                 )
             )

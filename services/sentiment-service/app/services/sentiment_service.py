@@ -179,6 +179,14 @@ class SentimentService:
         # Perform sentiment analysis
         analysis_result = await self._analyze_sentiment(news_input)
         
+        # If symbol_hint is provided and LLM returned a generic/default symbol, prefer the hint
+        if news_input.symbol_hint and analysis_result.symbol == "BTCUSDT":
+            hint_upper = news_input.symbol_hint.upper()
+            # Only override if hint is different and looks valid
+            if hint_upper != "BTCUSDT" and hint_upper.endswith("USDT"):
+                logger.info(f"Overriding LLM symbol {analysis_result.symbol} with hint {hint_upper}")
+                analysis_result.symbol = hint_upper
+        
         # Create document for storage
         document = SentimentDocument(
             title=news_input.title,
@@ -220,6 +228,18 @@ class SentimentService:
         
         return await self._gemini_sentiment_analysis(news_input)
 
+    def _resolve_symbol_hint(self, news_input: NewsInput) -> Optional[str]:
+        """Convert symbol_hint to TradeX format (XXXUSDT) if provided."""
+        if not news_input.symbol_hint:
+            return None
+        hint = news_input.symbol_hint.upper()
+        if hint.endswith("USDT"):
+            return hint
+        # Convert Yahoo format: BTC-USD -> BTCUSDT
+        if "-USD" in hint:
+            return hint.replace("-USD", "USDT").replace("-", "")
+        return hint + "USDT"
+
     async def _gemini_sentiment_analysis(
         self,
         news_input: NewsInput
@@ -244,11 +264,20 @@ class SentimentService:
                 self._gemini_model = genai.GenerativeModel(settings.gemini_model)
             
             # Format the prompt
+            symbol_context = ""
+            resolved_hint = self._resolve_symbol_hint(news_input)
+            if resolved_hint:
+                symbol_context = f"\n\n**Source Symbol:** {resolved_hint} (This article was collected from the {news_input.symbol_hint} feed. Use this symbol unless the article is clearly about a different cryptocurrency.)\n"
+            
             prompt = SENTIMENT_ANALYSIS_PROMPT.format(
                 title=news_input.title,
                 content=news_input.content[:5000],  # Limit content length
                 published_date=news_input.published_date.isoformat()
             )
+            
+            # Insert symbol context after the article section
+            if symbol_context:
+                prompt = prompt + symbol_context
             
             # Generate response
             response = await self._gemini_model.generate_content_async(prompt)
@@ -283,8 +312,12 @@ class SentimentService:
         """
         content_lower = (news_input.title + " " + news_input.content).lower()
         
-        # Simple keyword-based symbol detection
-        symbol = self._detect_symbol(content_lower)
+        # Use symbol_hint if provided, otherwise detect from content
+        resolved_hint = self._resolve_symbol_hint(news_input)
+        if resolved_hint:
+            symbol = resolved_hint
+        else:
+            symbol = self._detect_symbol(content_lower)
         
         # Simple keyword-based sentiment scoring
         sentiment, emotion = self._calculate_mock_sentiment(content_lower)
