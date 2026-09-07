@@ -42,8 +42,8 @@ The system was designed to evolve through three architectural versions, scaling 
 
 ### 🤖 AI-Powered Tools
 - **Price Prediction** — LSTM-based ML model predicting next candle log return, with BUY/SELL/HOLD recommendation
-- **Sentiment Analysis** — Fine-tuned RoBERTa model classifying news into Optimism, Fear, Greed, Anger, Pessimism with a continuous sentiment score (-1 to +1)
-- **AI Chatbot Assistant** — Conversational AI (powered by Gemini) providing real-time market analysis, support/resistance levels, and risk notes
+- **Sentiment Analysis** — News classified into Optimism, Greed, Excitement, Fear, Anger, Pessimism with a continuous sentiment score (-1 to +1). Gemini is the default backend; a local RoBERTa encoder can be swapped in with `SENTIMENT_BACKEND=local`
+- **AI Chatbot Assistant** — A tool-calling agent that answers market questions from live system data: it queries the prediction and sentiment services and retrieves real headlines from a vector index, then streams a grounded answer
 - **News Feed** — Aggregated news from Yahoo Finance, CryptoNews, Reddit with AI-generated summaries and per-article sentiment scores
 
 ### 🧪 Backtesting
@@ -90,16 +90,18 @@ System split into independent services: `User Service`, `Sentiment Service`, `Pr
 | Frontend | Next.js (React) |
 | API Gateway | NestJS |
 | User Service | NestJS + TypeScript |
-| Sentiment Service | Python (FastAPI / RoBERTa) |
+| Sentiment Service | Python (FastAPI, Gemini API + optional local RoBERTa) |
 | Prediction Service | Python (PyTorch LSTM, TorchScript) |
+| Chat Agent Service | Python (FastAPI, Gemini function calling) |
 | Message Broker | RabbitMQ |
 | Primary Database | MongoDB (Mongoose) |
 | Cache | Redis |
+| Vector Database | Qdrant (news retrieval for the chat agent) |
 | Load Balancer | Nginx (IP Hash) |
 | Containerization | Docker + Docker Compose |
 | Price Data Source | Binance WebSocket & REST API |
 | News Sources | Yahoo Finance, CryptoNews, Reddit |
-| AI / LLM | Gemini API (chatbot + hybrid sentiment) |
+| AI / LLM | Gemini API (chat agent + sentiment), RoBERTa encoder (local sentiment backend) |
 | Payment | VietQR |
 
 ---
@@ -214,6 +216,13 @@ CHAT_AGENT_SERVICE_URL=http://localhost:8006
 # Qdrant (news retrieval index)
 QDRANT_URL=http://localhost:6333
 
+# Sentiment backend: gemini (default) | local
+# `local` runs the RoBERTa encoder on CPU and needs no key. LOCAL_MODEL_VARIANT
+# picks base (the public checkpoint, currently the more accurate one) or student
+# (the LoRA fine-tune).
+SENTIMENT_BACKEND=gemini
+LOCAL_MODEL_VARIANT=base
+
 # Binance
 BINANCE_WS_URL=wss://stream.binance.com:9443
 ```
@@ -222,27 +231,55 @@ BINANCE_WS_URL=wss://stream.binance.com:9443
 
 ## Services
 
+Ports are the ones published by `docker-compose.dev.yml`.
+
 | Service | Port | Description |
 |---|---|---|
-| `api-gateway` | 3000 | Central routing, auth, JWT validation |
-| `user-service` | 3001 | User CRUD, VIP management, Redis caching |
+| `nginx` | 80 | Load balancer and single entry point |
+| `api-gateway` | 3001 | Central routing, auth, JWT validation |
+| `user-service` | 3010 | User CRUD, VIP management, Redis caching |
 | `collector-price` | — | Binance WebSocket listener, publishes to RabbitMQ |
-| `sentiment-service` | 5001 | News collection + RoBERTa inference + Gemini hybrid analysis |
-| `prediction-service` | 5002 | LSTM model inference, RESTful prediction endpoint |
-| `chat-agent-service` | 8006 | RAG + tool-calling market agent, SSE streaming |
-| `ws-gateway-1/2` | 3010/3011 | WebSocket gateways behind Nginx load balancer |
-| `symbol-alert-service` | — | Consumes RabbitMQ alerts, stores to Redis |
-| `frontend` | 3100 | Next.js web app |
+| `sentiment-service` | 8001 | News collection + sentiment analysis (Gemini or local RoBERTa) |
+| `prediction-service` | 8002 | LSTM model inference, RESTful prediction endpoint |
+| `email-service` | 8003 | Consumes RabbitMQ events, sends alert mail |
+| `symbol-alert-service` | 8004 | Consumes RabbitMQ alerts, stores to Redis |
+| `symbol-subscription-service` | 8005 | Per-user symbol subscriptions |
+| `chat-agent-service` | 8006 | Tool-calling market agent with news retrieval, SSE streaming |
+| `ws-gateway-1/2` | 3002/3003 | WebSocket gateways behind Nginx load balancer |
+| `qdrant` | 6333 | Vector index of news articles |
+| `frontend` | 3000 | Next.js web app |
 
 ---
 
 ## Advanced Modules
 
-### 🧠 Sentiment Analysis (RoBERTa + Gemini Hybrid)
-- Base model: `RoBERTa` (~125M params), fine-tuned on financial Twitter/news data from Hugging Face
-- Labels: spam filter → emotion classification (Anger, Excitement, Fear, Greed, Optimism, Pessimism) → continuous sentiment score
-- Training: Partial Freezing (first 6 layers frozen), Dynamic Masking, Linear Warmup LR, CrossEntropyLoss + MSELoss
-- Hybrid layer: for high-volatility news, Gemini API identifies affected trading pairs and explains sentiment shifts
+### 🧠 Sentiment Analysis (Gemini + local RoBERTa)
+
+Two interchangeable backends sit behind one API, selected with `SENTIMENT_BACKEND`:
+
+- **`gemini`** *(default)* — Gemini classifies each article into one of six emotions (Optimism, Greed, Excitement, Fear, Anger, Pessimism), assigns a continuous score in `[-1, +1]`, and for high-volatility news identifies the affected trading pairs. Every stored document records which backend produced it, so an API outage can never be mistaken for a healthy pipeline.
+- **`local`** — a RoBERTa encoder on CPU: no API key, no marginal cost, ~5x faster. Set `LOCAL_MODEL_VARIANT` to pick between two variants.
+
+#### The RoBERTa fine-tune
+
+`training/train_distill.py` distils the labels stored by the live pipeline into a small encoder — LoRA (rank 16, alpha 32, targeting `query`/`value`) over `mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis`, with two heads trained jointly: MSE on the sentiment score and CrossEntropy on the emotion class.
+
+**The result is negative, and the untrained checkpoint is the variant worth using.** All three systems below scored the same 50 hand-labelled articles:
+
+| | `local` / `base`<br>(no training) | `local` / `student`<br>(LoRA fine-tune) | `gemini` path |
+|---|---|---|---|
+| Sentiment-bucket accuracy | **66.0%** | 58.0% | 56.0% |
+| Emotion accuracy | n/a *(3-class)* | 28.0% | 24.0% |
+| Mean latency / article | ~41 ms | 41 ms | 229 ms |
+| Marginal cost / 1k articles | $0 | $0 | ~1350 input tokens each |
+
+*(Majority-class floor: 36.0%. None of the 50 evaluation articles appear in the 140 training or 36 validation rows.)*
+
+The LoRA pass **cost 8 points** against the checkpoint it started from — training on the current labels actively degraded a working model, which is why `student` is not the default and neither local variant is wired into production.
+
+**The cause is the labels, not the method.** The Gemini API key was suspended before the training set was exported, so the 176 rows carry labels from the keyword fallback rather than from Gemini — the student learned to imitate a regex. Restoring the key and re-running `export_training_data` → `train_distill` → `evaluate_distill` is what turns this into a real distillation result; the bar it then has to clear is the 66.0% above.
+
+Full write-up: [`training/report.md`](services/sentiment-service/training/report.md).
 
 ### 📉 Price Prediction (LSTM)
 - Input features: OHLCV + technical indicators (RSI, MACD, Bollinger Bands) + sentiment score
@@ -252,8 +289,26 @@ BINANCE_WS_URL=wss://stream.binance.com:9443
 - Training: PyTorch + CUDA on Colab, Adam optimizer, MSE loss
 - Deployment: TorchScript (`.pt`) compiled model served via FastAPI microservice with zero-downtime model swapping
 
+**Measured, and it does not yet beat a coin flip.** On the notebook's own chronological test split (4,995 BTCUSDT 1h bars) the model calls direction correctly on **49.1%** of bars, against a 50.9% majority-class floor, and its RMSE on log returns (0.005883) does not improve on the zero-change baseline (0.005874). The harness also found a **100x scale mismatch** in `bb_width` between training and serving, now pinned by a unit test so it cannot be silently changed on one side only. Full write-up: [`eval/report.md`](services/prediction-service/eval/report.md).
+
+### 💬 Grounded Chat Agent (tool calling + retrieval)
+
+`chat-agent-service` answers market questions from live system state instead of the model's own memory. Gemini is given three tools and decides which to call:
+
+| Tool | Backed by |
+|---|---|
+| `get_prediction(symbol)` | `prediction-service` |
+| `get_sentiment_summary(symbol, days?)` | `sentiment-service` |
+| `search_news(query, symbol?)` | Qdrant top-k over the `news_chunks` index |
+
+The loop is capped at 3 tool rounds, tools in the same round run concurrently, and the final answer streams over SSE. Every turn emits a trace of which tools ran, with what arguments, and how long each took — so "did it actually retrieve anything?" is answerable from the logs rather than by trusting the prose.
+
+Two design choices worth stating: **tools never raise** (a failure returns an error the model can report, so a dead dependency degrades the answer instead of the request), and **`AGENT_BACKEND=rules`** is a deterministic keyword planner over the same tools that serves as the fallback whenever Gemini fails — it drives the identical execution path and states plainly that no model wrote its output.
+
+`apps/web/app/api/chatbot/route.ts` is a thin proxy to this service and keeps the original SSE wire format, so the frontend chat panel is unchanged.
+
 ### 🐳 Docker Compose
-All services are containerized and declared in `docker-compose.dev.yml` with explicit network topology, port bindings, and dependency ordering. Services include infrastructure (MongoDB, Redis, RabbitMQ), data collection, AI/ML, backend, WebSocket cluster, and load balancer.
+All services are containerized and declared in `docker-compose.dev.yml` with explicit network topology, port bindings, and dependency ordering. Services include infrastructure (MongoDB, Redis, RabbitMQ, Qdrant), data collection, AI/ML, backend, WebSocket cluster, and load balancer. `docker-compose.prod.yml` is the deployment variant — see [`docs/deployment.md`](docs/deployment.md).
 
 ### 💳 VietQR Payment
 Admin configures bank account details once via the Admin Panel. The system uses the VietQR library to encode payment metadata into a standard QR code, which is rendered on the VIP checkout page. Users scan with any Vietnamese banking app — all fields pre-populated.
