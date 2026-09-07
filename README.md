@@ -1,5 +1,7 @@
 # USTrading 📈
 
+[![CI](https://github.com/HoangThanhMan/TradeUS/actions/workflows/ci.yml/badge.svg)](https://github.com/HoangThanhMan/TradeUS/actions/workflows/ci.yml)
+
 > **Trade Smarter, Not Harder** — A real-time cryptocurrency trading platform powered by AI-driven sentiment analysis, price prediction, and advanced backtesting.
 
 ---
