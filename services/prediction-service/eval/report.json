@@ -1,0 +1,102 @@
+{
+  "generated_at": "2026-08-18T15:29:48+00:00",
+  "model": {
+    "path": "services/prediction-service/models/crypto_predictor_btcusdt.pt",
+    "feature_cols": [
+      "log_ret",
+      "volume_log",
+      "sentiment",
+      "rsi",
+      "macd",
+      "bb_width"
+    ],
+    "window_size": 24,
+    "training_extra_info": {
+      "rmse": 367.9495319864802
+    }
+  },
+  "dataset": {
+    "symbol": "BTCUSDT",
+    "interval": "1h",
+    "sentiment_csv": "notebook/bitcoin_sentiments_21_24.csv",
+    "n_total": 24974,
+    "n_train": 19979,
+    "n_test": 4995,
+    "train_fraction": 0.8,
+    "test_start": "2024-02-17 20:00:00",
+    "test_end": "2024-09-12 22:00:00",
+    "up_fraction": 0.5091091091091091
+  },
+  "results": [
+    {
+      "model": "Naive (0-change)",
+      "rmse_log_return": 0.005874459717577918,
+      "mae_log_return": 0.003808677798561549,
+      "rmse_price_usd": 367.43791199443126,
+      "mae_price_usd": 240.0068268253082,
+      "directional_accuracy": null
+    },
+    {
+      "model": "Majority class",
+      "rmse_log_return": 0.005874459717577918,
+      "mae_log_return": 0.003808677798561549,
+      "rmse_price_usd": 367.43791199443126,
+      "mae_price_usd": 240.0068268253082,
+      "directional_accuracy": 0.5091091091091091
+    },
+    {
+      "model": "Persistence",
+      "rmse_log_return": 0.008396443790149163,
+      "mae_log_return": 0.0056313123411209755,
+      "rmse_price_usd": 524.257937842267,
+      "mae_price_usd": 354.4783977734308,
+      "directional_accuracy": 0.4800800800800801
+    },
+    {
+      "model": "LSTM (ours)",
+      "rmse_log_return": 0.0058829119398257895,
+      "mae_log_return": 0.003820253334906254,
+      "rmse_price_usd": 367.9494823108969,
+      "mae_price_usd": 240.72710175591104,
+      "directional_accuracy": 0.4906906906906907
+    },
+    {
+      "model": "LSTM (serving-path bb_width)",
+      "rmse_log_return": 0.005884309508211354,
+      "mae_log_return": 0.003821527336472849,
+      "rmse_price_usd": 368.01270064538505,
+      "mae_price_usd": 240.79906806432714,
+      "directional_accuracy": 0.4934934934934935
+    }
+  ],
+  "reproduction_check": {
+    "available": true,
+    "notebook_rmse_usd": 367.9495319864802,
+    "recomputed_rmse_usd": 367.9494823108969,
+    "abs_delta_usd": 4.967558334101341e-05,
+    "matches": true
+  },
+  "serving_parity": {
+    "training_bb_width_sample": 4.269929885864258,
+    "serving_bb_width_sample": 0.04269930009963669,
+    "ratio_training_over_serving": 99.99999709364296,
+    "scales_match": false
+  },
+  "verdict": {
+    "summary": "The LSTM calls direction correctly on **49.1%** of test bars, which does **not** beat the majority-class floor (50.9%). On this data the model has no demonstrated directional edge \u2014 an honest negative result, and exactly what this harness exists to find.",
+    "notes": [
+      "RMSE on log returns is not lower than the zero-change baseline (0.005883 vs 0.005874).",
+      "A low RMSE against the zero baseline is easy to reach by predicting near-zero returns and says little on its own. Directional accuracy is the metric the BUY/SELL/HOLD signal actually depends on."
+    ],
+    "beats_majority_baseline": false,
+    "beats_persistence_baseline": true,
+    "beats_naive_rmse": false
+  },
+  "caveats": [
+    "The scalers come from the checkpoint, which fitted them on the full series before splitting (as the notebook did). That leaks test-window scale statistics into training. It flatters the numbers slightly and should be fixed on the next retrain.",
+    "Training windows end one bar before the bar whose return is predicted, while the live service builds its window right up to the latest candle. That one-bar offset is a second train/serve difference worth closing.",
+    "Sentiment comes from a static 2021-2024 CSV, not from the live sentiment-service, so this says nothing about how the deployed sentiment feature behaves.",
+    "Fees and slippage are ignored. Directional accuracy above the baseline is not the same thing as a profitable strategy."
+  ],
+  "plot": null
+}
