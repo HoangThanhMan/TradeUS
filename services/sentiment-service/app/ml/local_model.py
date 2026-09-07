@@ -235,6 +235,12 @@ class LocalSentimentModel:
 
     def _load_unlocked(self) -> None:
         """Do the actual loading; assumes the lock is held."""
+        # Check the artifacts first. A missing adapter is the common, actionable
+        # failure, and reporting it should not depend on the ML extras being
+        # installed - importing torch first would mask it with an import error.
+        if self.variant != "base":
+            self._require_student_artifacts()
+
         torch = _torch()
 
         self._device = torch.device(
@@ -271,11 +277,8 @@ class LocalSentimentModel:
         }
         self._metadata["has_emotion_head"] = False
 
-    def _load_student_variant(self, base_model: str, torch: Any) -> None:
-        """Load the base encoder, attach the LoRA adapter, restore the heads."""
-        from peft import PeftModel
-        from transformers import AutoModel, AutoTokenizer
-
+    def _require_student_artifacts(self) -> tuple[str, str]:
+        """Return the adapter and heads paths, raising if either is missing."""
         adapter_dir = os.path.join(self.artifacts_dir, "lora_adapter")
         heads_path = os.path.join(self.artifacts_dir, "heads.pt")
 
@@ -285,6 +288,15 @@ class LocalSentimentModel:
                     f"{path} not found — run `python -m training.train_distill` "
                     "or set LOCAL_MODEL_VARIANT=base"
                 )
+
+        return adapter_dir, heads_path
+
+    def _load_student_variant(self, base_model: str, torch: Any) -> None:
+        """Load the base encoder, attach the LoRA adapter, restore the heads."""
+        from peft import PeftModel
+        from transformers import AutoModel, AutoTokenizer
+
+        adapter_dir, heads_path = self._require_student_artifacts()
 
         self._tokenizer = AutoTokenizer.from_pretrained(adapter_dir)
         base_encoder = AutoModel.from_pretrained(base_model)

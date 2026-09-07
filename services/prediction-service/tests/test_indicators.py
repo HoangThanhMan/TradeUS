@@ -10,7 +10,7 @@ them the right thing to gate CI on.
 import numpy as np
 import pytest
 
-from app.ml.model_manager import TechnicalIndicatorCalculator as Calc
+from app.ml.indicators import TechnicalIndicatorCalculator as Calc
 
 
 def rising(n=60, start=100.0, step=1.0):

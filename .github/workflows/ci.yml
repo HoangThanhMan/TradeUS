@@ -44,7 +44,7 @@ jobs:
         # Scoped to the files under test. The rest of the service predates this
         # workflow and carries pre-existing findings; cleaning those up is its
         # own change, not something to bundle into introducing CI.
-        run: ruff check app/ml/evaluate.py tests/test_indicators.py
+        run: ruff check app/ml/evaluate.py app/ml/indicators.py tests/test_indicators.py
 
       - name: Test
         run: pytest tests/test_indicators.py -v
@@ -126,8 +126,16 @@ jobs:
         run: npm ci
 
       - name: Lint
+        # Reports but does not gate. Unlike the Python jobs, this change adds no
+        # TypeScript of its own to scope the linter to, and the existing source
+        # carries ~490 findings - mostly no-unsafe-* from untyped Mongoose
+        # returns. Typing that is a real piece of work and its own change; until
+        # then the findings stay visible in the log rather than silently
+        # unlinted. Drop continue-on-error once they are cleared.
+        #
         # The package script passes --fix, which mutates files. CI must report
         # rather than rewrite, so eslint is invoked directly.
+        continue-on-error: true
         working-directory: services/user-service
         run: npx eslint "{src,apps,libs,test}/**/*.ts" --max-warnings=0
 
