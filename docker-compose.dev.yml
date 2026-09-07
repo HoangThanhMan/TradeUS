@@ -117,6 +117,11 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       REDIS_URL: redis://redis:6379
       MONGODB_URL: mongodb://admin:password@mongodb:27017/tradex_sentiment?authSource=admin
+      # gemini (default) or local. The local backend needs the ML extras in the
+      # image (requirements-local.txt) and the artifacts in training/artifacts;
+      # see services/sentiment-service/.env.example for the variants.
+      SENTIMENT_BACKEND: ${SENTIMENT_BACKEND:-gemini}
+      LOCAL_MODEL_VARIANT: ${LOCAL_MODEL_VARIANT:-base}
     depends_on:
       rabbitmq:
         condition: service_healthy

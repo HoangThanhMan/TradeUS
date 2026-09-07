@@ -95,6 +95,16 @@ class SentimentAnalysisResult(BaseModel):
         description="Comprehensive explanation for the sentiment analysis result",
         examples=["The article presents a constructive outlook driven by favorable market conditions and growing institutional interest. Key catalysts include expanding adoption metrics and positive on-chain data."]
     )
+    backend: Optional[str] = Field(
+        None,
+        description=(
+            "Which backend actually produced this result: 'gemini', "
+            "'local:student', 'local:base', or 'mock'. Recorded because the "
+            "pipeline falls back silently, and without this there is no way to "
+            "tell afterwards which system scored an article."
+        ),
+        examples=["gemini", "local:student", "mock"]
+    )
 
 
 class SentimentDocument(BaseModel):
@@ -111,6 +121,14 @@ class SentimentDocument(BaseModel):
     sentiment: float = Field(..., description="Sentiment score (-1 to 1)")
     reason: str = Field(..., description="Explanation for the sentiment")
     emotion: str = Field(..., description="Detected emotion")
+    backend: Optional[str] = Field(
+        None,
+        description=(
+            "Which backend produced this record: 'gemini', 'local:student', "
+            "'local:base', or 'mock'. Null on documents written before this "
+            "field existed."
+        )
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.utcnow(),
         description="Timestamp when the record was created"
@@ -129,6 +147,7 @@ class SentimentDocument(BaseModel):
                 "sentiment": 0.85,
                 "reason": "Strong positive sentiment due to institutional adoption",
                 "emotion": "Optimism",
+                "backend": "gemini",
                 "created_at": "2026-01-05T12:00:00Z"
             }
         }
@@ -147,6 +166,9 @@ class SentimentResponse(BaseModel):
     sentiment: float = Field(..., description="Sentiment score (-1 to 1)")
     emotion: str = Field(..., description="Detected emotion")
     reason: str = Field(..., description="Explanation for the sentiment")
+    backend: Optional[str] = Field(
+        None, description="Which backend produced this record"
+    )
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
 
     class Config:

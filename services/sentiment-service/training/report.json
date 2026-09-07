@@ -1,0 +1,698 @@
+{
+  "generated_at": "2026-08-18T15:28:49+00:00",
+  "student": {
+    "base_model": "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis",
+    "adapter": "training/artifacts/lora_adapter",
+    "trained_epoch": 2,
+    "trainable_percent": 0.3643530148105354
+  },
+  "provenance": {
+    "teacher": "mock",
+    "pipeline_backend": "mock",
+    "pipeline_n_gemini": 0,
+    "pipeline_n_total": 50,
+    "gemini_status": "Permission denied: Consumer 'api_key:AIza***REDACTED***' has been suspended."
+  },
+  "leakage_check": {
+    "n_labeled": 50,
+    "n_train": 140,
+    "n_val": 36,
+    "overlap_train": 0,
+    "overlap_val": 0,
+    "clean": true,
+    "examples": []
+  },
+  "student_vs_teacher": {
+    "n": 36,
+    "spearman": 0.17159754836949528,
+    "mae": 0.6675983731101784,
+    "emotion_accuracy": 0.3611111111111111,
+    "bucket_agreement": 0.2777777777777778,
+    "teacher": "mock"
+  },
+  "student_vs_human": {
+    "n": 50,
+    "bucket_accuracy": 0.58,
+    "emotion_accuracy": 0.28,
+    "bucket_confusion_matrix": {
+      "bullish": {
+        "bullish": 15,
+        "neutral": 1,
+        "bearish": 2
+      },
+      "neutral": {
+        "bullish": 12,
+        "neutral": 1,
+        "bearish": 3
+      },
+      "bearish": {
+        "bullish": 2,
+        "neutral": 1,
+        "bearish": 13
+      }
+    },
+    "bucket_scores": {
+      "bullish": {
+        "precision": 0.5172413793103449,
+        "recall": 0.8333333333333334,
+        "f1": 0.6382978723404256,
+        "support": 18
+      },
+      "neutral": {
+        "precision": 0.3333333333333333,
+        "recall": 0.0625,
+        "f1": 0.10526315789473684,
+        "support": 16
+      },
+      "bearish": {
+        "precision": 0.7222222222222222,
+        "recall": 0.8125,
+        "f1": 0.7647058823529411,
+        "support": 16
+      }
+    },
+    "prediction_distribution": {
+      "bearish": 18,
+      "bullish": 29,
+      "neutral": 3
+    },
+    "majority_class_baseline": 0.36
+  },
+  "pipeline_vs_human": {
+    "n": 50,
+    "bucket_accuracy": 0.56,
+    "emotion_accuracy": 0.24,
+    "backend": "mock"
+  },
+  "paired": {
+    "n": 50,
+    "both_right": 18,
+    "only_student_right": 11,
+    "only_pipeline_right": 10,
+    "both_wrong": 11,
+    "agreement": 0.58,
+    "disagreements": [
+      {
+        "title": "Silver nears $1 billion in volume on Hyperliquid as bitcoin remains frozen: Asia Morning Briefing",
+        "label": "neutral",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "pipeline"
+      },
+      {
+        "title": "XRP Slips Below $1.90 as Fed Anxiety Overshadows Major DXC Partnership",
+        "label": "bearish",
+        "student": "bearish",
+        "pipeline": "bullish",
+        "winner": "student"
+      },
+      {
+        "title": "Tom Lee Claims Parabolic Gold and Silver Move Is Masking Bullish Bitcoin and Ethereum Signals",
+        "label": "bullish",
+        "student": "neutral",
+        "pipeline": "bullish",
+        "winner": "pipeline"
+      },
+      {
+        "title": "Metroblox unveils USDC-backed stablecoin for transport payments",
+        "label": "neutral",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "pipeline"
+      },
+      {
+        "title": "'Forgotten Runiverse' on Ethereum Network Ronin Is the Latest Crypto Gaming Casualty",
+        "label": "bearish",
+        "student": "bearish",
+        "pipeline": "neutral",
+        "winner": "student"
+      },
+      {
+        "title": "Exclusive: Michael Saylor Pioneered Crypto Treasury Firms, But This Ethereum-Centric Company CEO Says Their Model Unlocks More Potential: Here's Why",
+        "label": "neutral",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "pipeline"
+      },
+      {
+        "title": "Pippin and Pengu Crypto Lift Meme Coin Market: Start Of Meme Frenzy?",
+        "label": "neutral",
+        "student": "neutral",
+        "pipeline": "bearish",
+        "winner": "student"
+      },
+      {
+        "title": "Fidelity to Enter Stablecoin Market With Ethereum-Based 'Digital Dollar'",
+        "label": "bullish",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "student"
+      },
+      {
+        "title": "Solana welcomes WisdomTree ecosystem in tokenization move",
+        "label": "bullish",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "student"
+      },
+      {
+        "title": "BNB Chain News: Enso Spikes, BNB Stabilizes, and Institutions Take Notice",
+        "label": "bullish",
+        "student": "bullish",
+        "pipeline": "neutral",
+        "winner": "student"
+      }
+    ]
+  },
+  "base_checkpoint_control": {
+    "base_model": "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis",
+    "n": 50,
+    "bucket_accuracy": 0.66,
+    "bucket_confusion_matrix": {
+      "bullish": {
+        "bullish": 12,
+        "neutral": 3,
+        "bearish": 3
+      },
+      "neutral": {
+        "bullish": 3,
+        "neutral": 9,
+        "bearish": 4
+      },
+      "bearish": {
+        "bullish": 2,
+        "neutral": 2,
+        "bearish": 12
+      }
+    },
+    "bucket_scores": {
+      "bullish": {
+        "precision": 0.7058823529411765,
+        "recall": 0.6666666666666666,
+        "f1": 0.6857142857142857,
+        "support": 18
+      },
+      "neutral": {
+        "precision": 0.6428571428571429,
+        "recall": 0.5625,
+        "f1": 0.6000000000000001,
+        "support": 16
+      },
+      "bearish": {
+        "precision": 0.631578947368421,
+        "recall": 0.75,
+        "f1": 0.6857142857142857,
+        "support": 16
+      }
+    },
+    "prediction_distribution": {
+      "bearish": 19,
+      "neutral": 14,
+      "bullish": 17
+    },
+    "id2label": {
+      "0": "bearish",
+      "1": "neutral",
+      "2": "bullish"
+    }
+  },
+  "latency": {
+    "student": {
+      "mean_single": 0.04120171000002301,
+      "median_single": 0.03650239999842597,
+      "p95_single": 0.07280479999826639,
+      "batched_per_article": 0.05226091600001382,
+      "n": 50
+    },
+    "pipeline_mean": 0.22879793600000084,
+    "pipeline_median": 0.12143220000007204,
+    "device": "cpu"
+  },
+  "cost": {
+    "prompt_template_tokens": 1289,
+    "mean_article_tokens": 61.22,
+    "mean_input_tokens_per_article": 1350.22,
+    "template_share": 0.9546592407163277,
+    "tokenizer_note": "Counted with the student's RoBERTa BPE tokenizer, not Gemini's. Treat as an approximation good to roughly +/-20%.",
+    "input_price_per_million": null
+  },
+  "caveats": [
+    "The 50 human labels are LLM-drafted pending review (`label_source: llm_draft`), so these are agreement rates against a draft reference, not verified ground truth.",
+    "50 articles is a small eval set: a single flipped article moves bucket accuracy by 2 points, so differences under ~5 points are noise.",
+    "The pipeline latency includes a failed Gemini round-trip before falling back, so it measures the current broken path, not a healthy API call.",
+    "Student latency is measured on CPU with no ONNX export or quantisation — it is a floor, not an optimised number.",
+    "Article bodies are Yahoo Finance summaries (~150 characters), not full text."
+  ],
+  "student_predictions": [
+    {
+      "link": "https://finance.yahoo.com/news/top-cryptocurrencies-fall-bitcoin-holds-210223644.html",
+      "title": "Top Cryptocurrencies Fall; Bitcoin Holds Above $89,000",
+      "label_bucket": "bearish",
+      "label_emotion": "Pessimism",
+      "pred_score": -0.7060279250144958,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/why-is-bnb-crypto-down-today-trade-war-fears-and-regulatory-hangovers-spark-5-sell-off/",
+      "title": "Why is BNB Crypto Down Today? Trade War Fears and Regulatory Hangovers Spark 5% Sell-Off",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.6052185893058777,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/01/27/silver-nears-usd1b-in-volume-on-hyperliquid-as-btc-remains-frozen-asia-morning-briefing",
+      "title": "Silver nears $1 billion in volume on Hyperliquid as bitcoin remains frozen: Asia Morning Briefing",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": 0.3622574806213379,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/xrp-slips-below-1-90-as-fed-anxiety-overshadows-major-dxc-partnership/",
+      "title": "XRP Slips Below $1.90 as Fed Anxiety Overshadows Major DXC Partnership",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.5358214378356934,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/bnb-crypto-challenges-915-slight-gains-set-stage-for-major-resistance-showdown/",
+      "title": "BNB Crypto Challenges $915: Slight Gains Set Stage for Major Resistance Showdown",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4756667912006378,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.ccn.com/news/crypto/tom-lee-claims-parabolic-gold-and-silver-move-is-masking-bullish-bitcoin-and-ethereum-signals/",
+      "title": "Tom Lee Claims Parabolic Gold and Silver Move Is Masking Bullish Bitcoin and Ethereum Signals",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.1628812551498413,
+      "pred_bucket": "neutral",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.electronicpaymentsinternational.com/news/metroblox-stablecoin-tranporartion-payments/",
+      "title": "Metroblox unveils USDC-backed stablecoin for transport payments",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.37191304564476013,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://decrypt.co/356046/forgotten-runiverse-ethereum-network-ronin-latest-crypto-gaming-casualty",
+      "title": "'Forgotten Runiverse' on Ethereum Network Ronin Is the Latest Crypto Gaming Casualty",
+      "label_bucket": "bearish",
+      "label_emotion": "Pessimism",
+      "pred_score": -0.33897748589515686,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/01/27/bnb-rises-2-5-nears-usd900-mark-as-prediction-market-growth-signals-utility-expansion",
+      "title": "BNB rises 2.5%, nears $900 mark as prediction market growth signals utility expansion",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5758302807807922,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/exclusive-michael-saylor-pioneered-crypto-183109249.html",
+      "title": "Exclusive: Michael Saylor Pioneered Crypto Treasury Firms, But This Ethereum-Centric Company CEO Says Their Model Unlocks More Potential: Here's Why",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5814102292060852,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/solana-seeker-price-analysis-crash-risk/",
+      "title": "Why Solana’s Seeker (SKR) Now Depends on Bears to Avoid a 17% Price Crash",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.6499057412147522,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.ccn.com/news/crypto/arthur-hayes-japans-yen-drama-end-up-pumping-bitcoin-heres-how/",
+      "title": "Arthur Hayes Says Japan’s Yen Drama Could End Up Pumping Bitcoin — Here’s How",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": -0.513518214225769,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/solana-price-rises-3-while-staking-hits-record-highs-is-126-the-floor/",
+      "title": "Solana Price Rises +3% While Staking Hits Record Highs – Is $126 the Floor",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4515274167060852,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/sharp-decline-in-spot-volume-in-jan/",
+      "title": "How January’s Sharp Decline in Spot Volume Is Threatening the Crypto Market Structure",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.7462257146835327,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/pump-fun-instant-memecoin-launch/",
+      "title": "Solana Meme Coin Season Back? Pump.fun Activity Soars As PUMP Spikes 34%",
+      "label_bucket": "bullish",
+      "label_emotion": "Excitement",
+      "pred_score": 0.5309016704559326,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.dlnews.com/articles/markets/when-xrp-price-is-seen-to-surge-by-80-percent/",
+      "title": "Here’s when XRP price is seen to surge by 80% after Ripple Treasury launch",
+      "label_bucket": "bullish",
+      "label_emotion": "Greed",
+      "pred_score": 0.5389689803123474,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/pippin-and-pengu-crypto-lift-meme-coin-market-start-of-meme-frenzy/",
+      "title": "Pippin and Pengu Crypto Lift Meme Coin Market: Start Of Meme Frenzy?",
+      "label_bucket": "neutral",
+      "label_emotion": "Excitement",
+      "pred_score": -0.0539560467004776,
+      "pred_bucket": "neutral",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/business/2026/01/28/wisdomtree-expands-tokenized-fund-access-to-solana-in-multichain-push",
+      "title": "WisdomTree expands tokenized fund access to Solana in multichain push",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4780507981777191,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.yahoo.com/news/articles/tether-ceo-aims-allocate-15-141755433.html",
+      "title": "Tether CEO aims to allocate up to 15% of its portfolio to gold",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": 0.514342188835144,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://decrypt.co/356165/fidelity-enters-stablecoin-market-ethereum-digital-dollar",
+      "title": "Fidelity to Enter Stablecoin Market With Ethereum-Based 'Digital Dollar'",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.532621443271637,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.wsj.com/livecoverage/fed-interest-rate-decision-01-28-2026/card/fidelity-to-launch-stablecoin-DmP6A3vGSZZMcwEPphri?siteid=yhoof2&yptr=yahoo",
+      "title": "Fidelity to  Launch a Stablecoin",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.45608285069465637,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.thestreet.com/crypto/innovation/solana-welcomes-wisdomtree-ecosystem-in-tokenization-move",
+      "title": "Solana welcomes WisdomTree ecosystem in tokenization move",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4837892949581146,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/bnb-chain-news-enso-spikes-175111508.html",
+      "title": "BNB Chain News: Enso Spikes, BNB Stabilizes, and Institutions Take Notice",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4852295219898224,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.thestreet.com/crypto/markets/bitcoin-xrp-jump-ahead-of-feds-first-2026-interest-rate-decision",
+      "title": "Bitcoin, XRP jump as Fed holds rates steady",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4916936159133911,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/21shares-xrp-price-outlook-2026/",
+      "title": "21Shares Make XRP Price Prediction for 2026",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5292698740959167,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.thestreet.com/crypto/markets/cathie-wood-links-binance-with-october-flash-crash",
+      "title": "Cathie Wood links Binance with October flash crash",
+      "label_bucket": "bearish",
+      "label_emotion": "Anger",
+      "pred_score": -0.23765473067760468,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://decrypt.co/356261/gemini-launches-zcash-credit-card-pays-zec-rewards",
+      "title": "Gemini Launches Zcash Credit Card That Pays ZEC Rewards",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.43942615389823914,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/hive-digital-expands-green-bitcoin-011414640.html",
+      "title": "HIVE Digital Expands Green Bitcoin Mining Capacity After Strong 2025 Output",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.48596012592315674,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/01/29/crypto-hit-hardest-in-market-selloff-with-analysts-seeing-bitcoin-in-deeper-pullback-to-usd70-000",
+      "title": "Bitcoin holds $84,000 — for now — but analysts warn of drop to $70,000 if support fails",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.6747626662254333,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.dlnews.com/articles/defi/thedao-returns-to-fund-ethereum-safety-10-years-after-hack/",
+      "title": "TheDAO returns with $220m to fund Ethereum security 10 years after catastrophic hack",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.40698108077049255,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.fool.com/investing/2026/01/31/prediction-this-popular-cryptocurrency-will-plunge/",
+      "title": "Prediction: This Popular Cryptocurrency Will Plunge 50% (or More) by Year-End 2026",
+      "label_bucket": "bearish",
+      "label_emotion": "Pessimism",
+      "pred_score": 0.6295889019966125,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/peter-schiff-asks-michael-saylor-114619765.html",
+      "title": "Peter Schiff Asks Michael Saylor What's Funding Dividend Payouts On Strategy's Preferred Stock: 'MSTR Is Losing Money'",
+      "label_bucket": "bearish",
+      "label_emotion": "Pessimism",
+      "pred_score": 0.19130046665668488,
+      "pred_bucket": "neutral",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/bnb-price-hits-low-new-addresses-spark-rebound/",
+      "title": "BNB Price Hits 7-Month Low—Will 1 Million New Addresses Spark a Rebound?",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.5203137397766113,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.fastcompany.com/91487909/why-so-many-meme-coins-fail-almost-immediately",
+      "title": "Why so many meme coins fail almost immediately",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": -0.5721338391304016,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/changpeng-zhao-says-fudders-fud-123104635.html",
+      "title": "Changpeng Zhao Says 'Fudders FUD' And Binance 'Buys' As Crypto Exchange Grapples With Insolvency Buzz Online",
+      "label_bucket": "bearish",
+      "label_emotion": "Anger",
+      "pred_score": -0.3674148619174957,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/02/07/bitcoin-falls-below-usd70-000-after-erasing-post-election-gains-during-sell-at-any-price-rout",
+      "title": "Bitcoin slips below $70,000 after erasing post-election gains during 'sell at any price' rout",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.706929624080658,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/dow-50000-sets-table-for-inflation-data-delayed-january-jobs-report-what-to-watch-this-week-123826626.html",
+      "title": "Dow 50,000 sets table for inflation data, delayed January jobs report: What to watch this week",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": 0.2798777222633362,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.fool.com/investing/2026/02/08/cryptocurrency-vs-other-cryptocurrency-which-is-mo/",
+      "title": "XRP vs Cardano: Which Is More Likely to Be a Millionaire Maker?",
+      "label_bucket": "neutral",
+      "label_emotion": "Greed",
+      "pred_score": 0.6720958948135376,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.fool.com/investing/2026/02/09/prediction-this-cryptocurrency-could-soar-187-in-2/",
+      "title": "Prediction: This Cryptocurrency Could Soar 187% in 2026",
+      "label_bucket": "bullish",
+      "label_emotion": "Greed",
+      "pred_score": 0.5633804202079773,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://beincrypto.com/xrp-price-crash-inspires-whale-buying/",
+      "title": "XRP Price Crash To 15-Month Low Inspires $2.2 Billion Whale Buying",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.6701096892356873,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.ccn.com/news/crypto/tom-lee-claims-ethereum-could-rebound-as-fast-as-it-fell-even-as-critics-push-back/",
+      "title": "Tom Lee Claims Ethereum Could Rebound ‘As Fast As It Fell’ — Even as Critics Push Back",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5277677774429321,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/02/09/tom-lee-s-bitmine-adds-to-eth-stack-after-price-crash-now-holds-3-6-of-ethereum-s-total-supply",
+      "title": "Tom Lee’s Bitmine Immersion added 40,613 ether last week as prices crashed",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.4262712895870209,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/ethereum-price-1000-crash-prediction/",
+      "title": "Ethereum Price Hits Breakdown Target — But Is a Bigger Drop to $1,000 Coming?",
+      "label_bucket": "bearish",
+      "label_emotion": "Fear",
+      "pred_score": -0.5900097489356995,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/tech/2026/02/09/megaeth-debuts-mainnet-as-ethereum-scaling-debate-heats-up",
+      "title": "MegaETH debuts mainnet as Ethereum scaling debate heats up",
+      "label_bucket": "neutral",
+      "label_emotion": "Excitement",
+      "pred_score": 0.4479641914367676,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.coindesk.com/markets/2026/02/09/bitcoin-shakes-off-early-decline-returns-to-usd70-000-as-bernstein-reiterates-usd150-000-outlook",
+      "title": "Bitcoin shakes off early decline, returns to $70,000 as Bernstein reiterates $150,000 outlook",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": -0.6149582862854004,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://finance.yahoo.com/news/live/stock-market-today-dow-ekes-out-fresh-record-sp-500-nasdaq-rally-for-2nd-day-as-tech-bounce-back-continues-210022455.html",
+      "title": "Stock market today: Dow ekes out fresh record, S&P 500, Nasdaq rally for 2nd day as tech bounce back continues",
+      "label_bucket": "neutral",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5820977687835693,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    },
+    {
+      "link": "https://www.wealthmanagement.com/crypto/ria-s-show-low-exposure-to-the-latest-crypto-crash",
+      "title": "RIAs Show Low Exposure to the Latest Crypto Crash",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": -0.6265662312507629,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://99bitcoins.com/news/altcoins/ripple-xrp-institutional-settlement-strategy/",
+      "title": "Ripple Pushes XRP Toward Institutional Settlement: Why That Matters Beyond the Price",
+      "label_bucket": "bullish",
+      "label_emotion": "Optimism",
+      "pred_score": 0.5178694128990173,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://www.fool.com/investing/2026/02/09/xrp-is-down-more-than-50-in-6-months/",
+      "title": "XRP Is Down More Than 50% in 6 Months. Has It Become a Bargain Buy?",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": -0.6561203002929688,
+      "pred_bucket": "bearish",
+      "pred_emotion": "Pessimism"
+    },
+    {
+      "link": "https://beincrypto.com/ripple-expands-custody-partnerships-xrp-price-struggles/",
+      "title": "Ripple Boosts Institutional Custody Capabilities as XRP Extends a 32% Slide",
+      "label_bucket": "neutral",
+      "label_emotion": "Pessimism",
+      "pred_score": 0.4902554154396057,
+      "pred_bucket": "bullish",
+      "pred_emotion": "Optimism"
+    }
+  ]
+}

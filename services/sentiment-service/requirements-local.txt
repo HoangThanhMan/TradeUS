@@ -1,0 +1,8 @@
+# Dependencies for SENTIMENT_BACKEND=local.
+# Not needed when running the default Gemini backend -- the service imports
+# torch/transformers/peft lazily, so it starts fine without them.
+-r requirements.txt
+
+torch>=2.1.0
+transformers>=4.36.0
+peft>=0.10.0
