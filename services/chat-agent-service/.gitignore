@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.env
+*.egg-info/
+dist/
+build/
+*.egg
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Embedded Qdrant store (rebuildable from MongoDB)
+.qdrant/
