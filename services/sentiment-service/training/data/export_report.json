@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-08-18T07:24:04+00:00",
+  "databases": [
+    "tradex_sentiment",
+    "tradex"
+  ],
+  "provenance": {
+    "mock": 226
+  },
+  "teacher_filter": "all",
+  "exclusions": {
+    "eval_set_holdout": 50,
+    "duplicates": 25
+  },
+  "splits": {
+    "train": {
+      "n": 140,
+      "emotions": {
+        "Optimism": 38,
+        "Greed": 13,
+        "Pessimism": 48,
+        "Excitement": 21,
+        "Fear": 11,
+        "Anger": 9
+      },
+      "symbols": {
+        "BTCUSDT": 87,
+        "ETHUSDT": 22,
+        "XRPUSDT": 14,
+        "SOLUSDT": 14,
+        "BNBUSDT": 3
+      },
+      "teachers": {
+        "mock": 140
+      },
+      "sentiment_score": {
+        "min": -1.0,
+        "median": 0.0219,
+        "max": 1.0,
+        "mean": 0.12538571428571443
+      },
+      "date_range": [
+        "2026-01-28T05:51:41.856000",
+        "2026-02-09T19:25:42.491000"
+      ]
+    },
+    "val": {
+      "n": 36,
+      "emotions": {
+        "Excitement": 2,
+        "Anger": 4,
+        "Optimism": 14,
+        "Pessimism": 11,
+        "Greed": 1,
+        "Fear": 4
+      },
+      "symbols": {
+        "BTCUSDT": 25,
+        "ETHUSDT": 6,
+        "BNBUSDT": 2,
+        "XRPUSDT": 2,
+        "SOLUSDT": 1
+      },
+      "teachers": {
+        "mock": 36
+      },
+      "sentiment_score": {
+        "min": -1.0,
+        "median": -0.0032,
+        "max": 1.0,
+        "mean": -0.1460416666666666
+      },
+      "date_range": [
+        "2026-02-09T19:25:43.156000",
+        "2026-02-10T07:46:15.403000"
+      ]
+    }
+  },
+  "files": {
+    "training rows": "training/data/train.jsonl",
+    "validation rows": "training/data/val.jsonl"
+  }
+}

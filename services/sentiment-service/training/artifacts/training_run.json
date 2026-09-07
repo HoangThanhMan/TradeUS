@@ -1,0 +1,187 @@
+{
+  "generated_at": "2026-08-18T07:36:20+00:00",
+  "config": {
+    "base_model": "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis",
+    "max_length": 256,
+    "epochs": 10,
+    "batch_size": 8,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "lora_target_modules": [
+      "query",
+      "value"
+    ],
+    "regression_weight": 1.0,
+    "emotion_weight": 1.0,
+    "seed": 20260218
+  },
+  "parameters": {
+    "base_encoder_params": 82118400,
+    "total_params": 82418695,
+    "trainable_params": 300295,
+    "trainable_percent": 0.3643530148105354,
+    "lora_params": 294912,
+    "head_params": 5383
+  },
+  "data": {
+    "n_train": 140,
+    "n_val": 36,
+    "device": "cpu",
+    "teacher_counts": {
+      "mock": 176
+    },
+    "train_emotions": {
+      "Optimism": 38,
+      "Greed": 13,
+      "Pessimism": 48,
+      "Excitement": 21,
+      "Fear": 11,
+      "Anger": 9
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 2.4721218877368503,
+      "train_regression_loss": 0.6719117172890239,
+      "train_emotion_loss": 1.8002101911438837,
+      "val_loss": 2.286585145526462,
+      "val_mae": 0.7059866852230496,
+      "val_emotion_accuracy": 0.3888888888888889,
+      "val_spearman": 0.1299275554773554,
+      "lr": 0.0003
+    },
+    {
+      "epoch": 2,
+      "train_loss": 2.0127447843551636,
+      "train_regression_loss": 0.4493293762207031,
+      "train_emotion_loss": 1.563415401511722,
+      "val_loss": 2.2060353093677096,
+      "val_mae": 0.6675983203781976,
+      "val_emotion_accuracy": 0.3611111111111111,
+      "val_spearman": 0.17159754836949528,
+      "lr": 0.0002666666666666666
+    },
+    {
+      "epoch": 3,
+      "train_loss": 1.908332155810462,
+      "train_regression_loss": 0.40655872639682555,
+      "train_emotion_loss": 1.5017734567324321,
+      "val_loss": 2.2423390017615423,
+      "val_mae": 0.6321802337964376,
+      "val_emotion_accuracy": 0.3611111111111111,
+      "val_spearman": 0.19217372498393703,
+      "lr": 0.0002333333333333333
+    },
+    {
+      "epoch": 4,
+      "train_loss": 1.810767650604248,
+      "train_regression_loss": 0.4027915034029219,
+      "train_emotion_loss": 1.4079761571354337,
+      "val_loss": 2.373495658238729,
+      "val_mae": 0.6824533409542508,
+      "val_emotion_accuracy": 0.3611111111111111,
+      "val_spearman": 0.1974795315323151,
+      "lr": 0.0002
+    },
+    {
+      "epoch": 5,
+      "train_loss": 1.7134984135627747,
+      "train_regression_loss": 0.3155609721110927,
+      "train_emotion_loss": 1.397937450144026,
+      "val_loss": 2.4167138470543756,
+      "val_mae": 0.683383067448934,
+      "val_emotion_accuracy": 0.3611111111111111,
+      "val_spearman": 0.15412720973459193,
+      "lr": 0.00016666666666666666
+    },
+    {
+      "epoch": 6,
+      "train_loss": 1.5971116489834256,
+      "train_regression_loss": 0.26872267077366513,
+      "train_emotion_loss": 1.3283889591693878,
+      "val_loss": 2.583992852105035,
+      "val_mae": 0.7186813818083869,
+      "val_emotion_accuracy": 0.3333333333333333,
+      "val_spearman": 0.19062080599416786,
+      "lr": 0.0001333333333333333
+    },
+    {
+      "epoch": 7,
+      "train_loss": 1.5285432073805068,
+      "train_regression_loss": 0.26527708851628834,
+      "train_emotion_loss": 1.2632661130693223,
+      "val_loss": 2.4808602465523615,
+      "val_mae": 0.6730295552147759,
+      "val_emotion_accuracy": 0.3888888888888889,
+      "val_spearman": 0.1832444407927642,
+      "lr": 0.0001
+    },
+    {
+      "epoch": 8,
+      "train_loss": 1.482074972656038,
+      "train_regression_loss": 0.2400048640039232,
+      "train_emotion_loss": 1.2420700987180073,
+      "val_loss": 2.5535032749176025,
+      "val_mae": 0.7042405406634012,
+      "val_emotion_accuracy": 0.3888888888888889,
+      "val_spearman": 0.16965639963228382,
+      "lr": 6.666666666666666e-05
+    },
+    {
+      "epoch": 9,
+      "train_loss": 1.4015314512782626,
+      "train_regression_loss": 0.22214889319406617,
+      "train_emotion_loss": 1.17938255932596,
+      "val_loss": 2.6465743912590876,
+      "val_mae": 0.7287050618065728,
+      "val_emotion_accuracy": 0.4166666666666667,
+      "val_spearman": 0.1695269897164697,
+      "lr": 3.333333333333335e-05
+    },
+    {
+      "epoch": 10,
+      "train_loss": 1.4265079365836248,
+      "train_regression_loss": 0.21951289888885286,
+      "train_emotion_loss": 1.2069950269328222,
+      "val_loss": 2.6206991407606335,
+      "val_mae": 0.7213990423414443,
+      "val_emotion_accuracy": 0.3888888888888889,
+      "val_spearman": 0.16473882283134805,
+      "lr": 0.0
+    }
+  ],
+  "best_epoch": 2,
+  "best_val_loss": 2.2060353093677096,
+  "selected": {
+    "epoch": 2,
+    "train_loss": 2.0127447843551636,
+    "train_regression_loss": 0.4493293762207031,
+    "train_emotion_loss": 1.563415401511722,
+    "val_loss": 2.2060353093677096,
+    "val_mae": 0.6675983203781976,
+    "val_emotion_accuracy": 0.3611111111111111,
+    "val_spearman": 0.17159754836949528,
+    "lr": 0.0002666666666666666
+  },
+  "final_epoch_metrics": {
+    "epoch": 10,
+    "train_loss": 1.4265079365836248,
+    "train_regression_loss": 0.21951289888885286,
+    "train_emotion_loss": 1.2069950269328222,
+    "val_loss": 2.6206991407606335,
+    "val_mae": 0.7213990423414443,
+    "val_emotion_accuracy": 0.3888888888888889,
+    "val_spearman": 0.16473882283134805,
+    "lr": 0.0
+  },
+  "artifacts": {
+    "lora_adapter": "training/artifacts/lora_adapter",
+    "heads": "training/artifacts/heads.pt",
+    "loss_curve": "training/artifacts/loss_curve.png"
+  }
+}

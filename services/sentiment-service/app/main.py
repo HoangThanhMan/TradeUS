@@ -75,6 +75,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if settings.environment == "production":
                 raise
 
+    # Warm up the local sentiment model so the first request does not pay the
+    # model load. Never fatal: the service falls back to Gemini if this fails.
+    if settings.sentiment_backend == "local" and settings.local_model_warmup:
+        try:
+            from app.ml.local_model import get_local_model
+
+            model = get_local_model()
+            if model.load():
+                logger.info(
+                    f"Local sentiment model ready "
+                    f"(variant={settings.local_model_variant})"
+                )
+            else:
+                logger.error(
+                    f"Local sentiment model failed to load ({model.load_error}); "
+                    f"falling back to the Gemini backend"
+                )
+        except Exception as e:
+            logger.error(f"Local sentiment model warmup failed: {e}")
+
     # Initialize and start the collector scheduler
     if settings.enable_scheduler:
         try:

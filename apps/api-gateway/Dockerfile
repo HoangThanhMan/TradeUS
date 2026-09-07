@@ -53,6 +53,22 @@ WORKDIR /app
 COPY --from=builder /app/packages/shared-types ./packages/shared-types
 COPY --from=builder /app/packages/auth-shared ./packages/auth-shared
 
+# Gỡ bản @nestjs LỒNG bên trong packages/*.
+#
+# auth-shared khai báo @nestjs/common và @nestjs/core trong "dependencies" (đúng
+# ra phải là peerDependencies), nên npm cài một bản riêng vào
+# packages/auth-shared/node_modules, và COPY ở trên bê nguyên bản đó vào image.
+# Hậu quả: RolesGuard trong auth-shared nhận `Reflector` từ bản lồng, còn Nest
+# của app cung cấp `Reflector` từ /app/node_modules — hai class khác nhau nên DI
+# không khớp token:
+#
+#   Nest can't resolve dependencies of the RolesGuard (?).
+#   Please make sure that the argument Reflector at index [0] is available.
+#
+# Xoá đi thì Node resolve ngược lên /app/node_modules/@nestjs, chỉ còn một bản.
+RUN rm -rf packages/auth-shared/node_modules/@nestjs \
+           packages/shared-types/node_modules/@nestjs
+
 # Copy package files
 COPY apps/api-gateway/package.json ./
 

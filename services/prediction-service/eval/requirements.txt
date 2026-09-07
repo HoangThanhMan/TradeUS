@@ -1,0 +1,8 @@
+# Extra dependencies for the offline evaluation harness (app/ml/evaluate.py).
+# The service itself does not need these at runtime.
+-r ../requirements.txt
+
+pandas>=2.1.0
+ta>=0.11.0
+requests>=2.31.0
+matplotlib>=3.8.0

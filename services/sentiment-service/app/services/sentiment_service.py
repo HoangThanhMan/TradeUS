@@ -4,6 +4,7 @@ Contains business logic for LLM-based sentiment analysis and orchestrates
 the flow between input processing, analysis, and storage.
 """
 
+import asyncio
 import json
 import logging
 import random
@@ -197,6 +198,7 @@ class SentimentService:
             sentiment=analysis_result.sentiment,
             reason=analysis_result.reason,
             emotion=analysis_result.emotion.value,
+            backend=analysis_result.backend,
             created_at=datetime.utcnow()
         )
         
@@ -205,7 +207,9 @@ class SentimentService:
         
         logger.info(
             f"Saved sentiment analysis: symbol={analysis_result.symbol}, "
-            f"sentiment={analysis_result.sentiment:.2f}, emotion={analysis_result.emotion.value}"
+            f"sentiment={analysis_result.sentiment:.2f}, "
+            f"emotion={analysis_result.emotion.value}, "
+            f"backend={analysis_result.backend}"
         )
         
         return response
@@ -222,11 +226,94 @@ class SentimentService:
         Returns:
             SentimentAnalysisResult: The analysis results.
         """
-        if settings.use_mock_llm or not settings.gemini_api_key:
+        # An explicit mock override wins over everything else.
+        if settings.use_mock_llm:
             logger.info("Using mock LLM for sentiment analysis")
-            return await self._mock_sentiment_analysis(news_input)
-        
+            result = await self._mock_sentiment_analysis(news_input)
+            result.backend = result.backend or "mock"
+            return result
+
+        # Checked before the API-key guard: running locally is precisely the
+        # case where there is no Gemini key to configure, so requiring one
+        # would defeat the point of the local backend.
+        if settings.sentiment_backend == "local":
+            result = await self._local_sentiment_analysis(news_input)
+            if result is not None:
+                return result
+            # Local inference failed. Fall through to the API path so switching
+            # backends can degrade but never break the pipeline.
+            logger.warning("Local backend unavailable, falling back to Gemini")
+
+        if not settings.gemini_api_key:
+            logger.info("No Gemini API key configured, using mock LLM")
+            result = await self._mock_sentiment_analysis(news_input)
+            result.backend = result.backend or "mock"
+            return result
+
         return await self._gemini_sentiment_analysis(news_input)
+
+    async def _local_sentiment_analysis(
+        self,
+        news_input: NewsInput
+    ) -> Optional[SentimentAnalysisResult]:
+        """
+        Score the article with the local encoder instead of calling Gemini.
+
+        Returns None rather than raising when the model cannot be loaded or run,
+        so the caller can fall back to the API path.
+
+        The local model produces a score and an emotion but no written
+        rationale. The reason field says so explicitly rather than synthesising
+        analysis the model never performed.
+
+        Args:
+            news_input: The news article to analyze.
+
+        Returns:
+            SentimentAnalysisResult, or None if local inference is unavailable.
+        """
+        try:
+            from app.ml.local_model import get_local_model
+
+            model = get_local_model()
+            text = f"{news_input.title}\n\n{news_input.content[:5000]}"
+
+            # Torch inference is blocking CPU work; keep it off the event loop.
+            score, emotion_label = await asyncio.to_thread(model.predict, text)
+        except Exception as e:
+            logger.error(f"Local sentiment inference failed: {e}", exc_info=True)
+            return None
+
+        try:
+            emotion = EmotionType(emotion_label)
+        except ValueError:
+            emotion = EmotionType.OPTIMISM
+
+        resolved_hint = self._resolve_symbol_hint(news_input)
+        symbol = resolved_hint or self._detect_symbol(
+            (news_input.title + " " + news_input.content).lower()
+        )
+
+        backend = f"local:{settings.local_model_variant}"
+        reason = (
+            f"Scored locally by the {settings.local_model_variant} model "
+            f"({model.describe().get('base_model', 'unknown base')}): "
+            f"sentiment {score:+.3f}, emotion {emotion.value}. "
+            "This backend returns scores only — no written rationale is "
+            "generated, so no explanatory text should be attributed to it."
+        )
+
+        logger.debug(
+            f"Local sentiment: {symbol} {score:+.3f} {emotion.value} via {backend}"
+        )
+
+        return SentimentAnalysisResult(
+            symbol=symbol,
+            sentiment=max(-1.0, min(1.0, float(score))),
+            emotion=emotion,
+            reason=reason,
+            backend=backend,
+        )
 
     def _resolve_symbol_hint(self, news_input: NewsInput) -> Optional[str]:
         """Convert symbol_hint to TradeX format (XXXUSDT) if provided."""
@@ -284,16 +371,24 @@ class SentimentService:
             
             # Parse response
             result = self._parse_llm_response(response.text)
+            result.backend = "gemini"
             
             logger.debug(f"Gemini analysis result: {result}")
             return result
             
         except ImportError:
             logger.warning("google-generativeai not installed, falling back to mock")
-            return await self._mock_sentiment_analysis(news_input)
+            result = await self._mock_sentiment_analysis(news_input)
+            result.backend = "mock"
+            return result
         except Exception as e:
+            # Logged at ERROR because a silent fallback here is indistinguishable
+            # from a healthy pipeline -- the stored `backend` field is the only
+            # durable record that Gemini did not answer.
             logger.error(f"Gemini API error: {e}, falling back to mock")
-            return await self._mock_sentiment_analysis(news_input)
+            result = await self._mock_sentiment_analysis(news_input)
+            result.backend = "mock"
+            return result
 
     async def _mock_sentiment_analysis(
         self,
@@ -329,7 +424,8 @@ class SentimentService:
             symbol=symbol,
             sentiment=sentiment,
             emotion=emotion,
-            reason=reason
+            reason=reason,
+            backend="mock"
         )
 
     def _detect_symbol(self, content: str) -> str:

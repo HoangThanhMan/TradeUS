@@ -1,5 +1,7 @@
 # USTrading 📈
 
+[![CI](https://github.com/HoangThanhMan/TradeUS/actions/workflows/ci.yml/badge.svg)](https://github.com/HoangThanhMan/TradeUS/actions/workflows/ci.yml)
+
 > **Trade Smarter, Not Harder** — A real-time cryptocurrency trading platform powered by AI-driven sentiment analysis, price prediction, and advanced backtesting.
 
 ---
@@ -203,8 +205,14 @@ REDIS_PORT=6379
 # RabbitMQ
 RABBITMQ_URL=amqp://localhost:5672
 
-# Gemini (AI Chatbot)
+# Gemini (AI Chatbot + embeddings)
 GEMINI_API_KEY=your_gemini_api_key
+
+# Chat agent (the /api/chatbot route proxies to this service)
+CHAT_AGENT_SERVICE_URL=http://localhost:8006
+
+# Qdrant (news retrieval index)
+QDRANT_URL=http://localhost:6333
 
 # Binance
 BINANCE_WS_URL=wss://stream.binance.com:9443
@@ -221,6 +229,7 @@ BINANCE_WS_URL=wss://stream.binance.com:9443
 | `collector-price` | — | Binance WebSocket listener, publishes to RabbitMQ |
 | `sentiment-service` | 5001 | News collection + RoBERTa inference + Gemini hybrid analysis |
 | `prediction-service` | 5002 | LSTM model inference, RESTful prediction endpoint |
+| `chat-agent-service` | 8006 | RAG + tool-calling market agent, SSE streaming |
 | `ws-gateway-1/2` | 3010/3011 | WebSocket gateways behind Nginx load balancer |
 | `symbol-alert-service` | — | Consumes RabbitMQ alerts, stores to Redis |
 | `frontend` | 3100 | Next.js web app |

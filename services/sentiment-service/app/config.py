@@ -51,9 +51,36 @@ class Settings(BaseSettings):
     mongodb_database: str = "tradex"
 
     # Google Gemini API configuration
-    gemini_api_key: str = "AIzaSyBeFbeT472uFHEIrnuupVqmasVtZMoJe3s"
-    gemini_model: str = "gemini-1.5-flash"
+    # No default: a key committed to the repo is a key that gets revoked. The
+    # previous hardcoded default was suspended by Google for exactly that
+    # reason. Empty means the service falls back to the keyword mock, which is
+    # visible in /health and in each record's `backend` field.
+    gemini_api_key: str = ""
+    # gemini-1.5-flash đã bị Google gỡ. Đổi được qua env GEMINI_MODEL.
+    gemini_model: str = "gemini-3.6-flash"
     use_mock_llm: bool = False  # Set to False to use real Gemini API
+
+    # Sentiment backend selection
+    # "gemini" -> call the Gemini API (default; unchanged behaviour)
+    # "local"  -> score with the local encoder in app/ml/local_model.py
+    # Gemini stays the fallback when local inference fails, so switching
+    # backends can degrade but never break the pipeline.
+    sentiment_backend: Literal["gemini", "local"] = "gemini"
+
+    # Local backend configuration (only read when sentiment_backend == "local")
+    # "student" -> the LoRA adapter from training/train_distill.py
+    # "base"    -> the public checkpoint with no adapter. Measured at 66.0%
+    #              bucket accuracy vs the student's 58.0% on the hand-labelled
+    #              set (see services/sentiment-service/training/report.md), so
+    #              this is currently the better local option.
+    local_model_variant: Literal["student", "base"] = "student"
+    local_model_dir: str = "training/artifacts"
+    local_model_base: str = (
+        "mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis"
+    )
+    local_max_length: int = 256
+    local_model_device: str = ""  # "" -> auto-detect, or "cpu" / "cuda"
+    local_model_warmup: bool = True  # load at startup instead of on first request
 
     # Reddit API configuration (for data collection)
     reddit_client_id: str = ""

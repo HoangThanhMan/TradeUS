@@ -1,0 +1,305 @@
+# =============================================================================
+# TradeUS — production overlay
+#
+# Layered on top of docker-compose.dev.yml:
+#
+#     docker compose -f docker-compose.dev.yml -f docker-compose.prod.yml up -d
+#
+# What it changes:
+#   1. Stops publishing internal ports. In the dev file every service binds
+#      0.0.0.0 — on a public server that puts MongoDB, Redis, RabbitMQ and
+#      Qdrant straight on the internet, and unauthenticated Mongo/Redis get
+#      found and wiped within hours. Here only nginx (:80) and the web app
+#      (:3000) are reachable from outside; everything else talks over the
+#      compose network by service name.
+#   2. Moves every credential into .env instead of hardcoding it.
+#   3. Adds authentication to Redis, which the dev file runs open.
+#   4. restart: always, plus log rotation so a long-running box does not fill
+#      its disk with container logs.
+#
+# Requires Docker Compose v2.24+ for the `!override` tag. Check with
+# `docker compose version`, and verify the merge with `docker compose config`
+# before starting anything.
+# =============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &restart-policy
+  restart: always
+
+services:
+  # ---------------------------------------------------------------------------
+  # Infrastructure — no published ports at all.
+  #
+  # To inspect one from your laptop, tunnel over SSH rather than opening a port:
+  #     ssh -L 27017:localhost:27017 user@server
+  # after temporarily adding `ports: ["127.0.0.1:27017:27017"]` here.
+  # ---------------------------------------------------------------------------
+  mongodb:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: tradex
+
+  redis:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+
+  qdrant:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+
+  # ---------------------------------------------------------------------------
+  # Application services — internal only, reached through nginx.
+  # ---------------------------------------------------------------------------
+  collector-price:
+    <<: *restart-policy
+    logging: *default-logging
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      BINANCE_WS_URL: wss://fstream.binance.com/stream
+      BINANCE_SYMBOLS: ${BINANCE_SYMBOLS:-btcusdt,ethusdt,bnbusdt,solusdt,xrpusdt}
+      BINANCE_STREAM_TYPE: miniTicker
+      RABBITMQ_EXCHANGE: tradex.prices
+      RABBITMQ_EXCHANGE_TYPE: topic
+      RABBITMQ_ROUTING_KEY_PREFIX: price
+
+  sentiment-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8001
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex_sentiment?authSource=admin
+      MONGODB_DATABASE: tradex_sentiment
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Google gỡ model khá thường xuyên (gemini-1.5-flash và gemini-2.0-flash
+      # đều đã biến mất). Để ở đây để đổi được mà không phải build lại image.
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      SENTIMENT_BACKEND: ${SENTIMENT_BACKEND:-gemini}
+      LOCAL_MODEL_VARIANT: ${LOCAL_MODEL_VARIANT:-base}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+
+  prediction-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8002
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex_predictions?authSource=admin
+      SENTIMENT_SERVICE_URL: http://sentiment-service:8001
+      MODEL_PATH: models/crypto_predictor_btcusdt.pt
+
+  chat-agent-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8006
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex_sentiment?authSource=admin
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: news_chunks
+      PREDICTION_SERVICE_URL: http://prediction-service:8002
+      SENTIMENT_SERVICE_URL: http://sentiment-service:8001
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      # Đổi model embedding là đổi số chiều vector -> phải ingest lại Qdrant với
+      # --recreate, không dùng chung collection cũ được.
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-models/gemini-embedding-001}
+      AGENT_BACKEND: ${AGENT_BACKEND:-gemini}
+      EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-gemini}
+
+  email-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8003
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      EMAIL_STRATEGY: ${EMAIL_STRATEGY:-console}
+      # Only used when EMAIL_STRATEGY=smtp. Before this was wired up, switching
+      # to smtp silently used the credentials hardcoded in app/config.py.
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-TradeUS}
+
+  symbol-alert-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8004
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      ALERT_COOLDOWN_SECONDS: 5
+      SUBSCRIPTION_SERVICE_URL: http://symbol-subscription-service:8005
+      EMAIL_EXCHANGE: email.exchange
+      EMAIL_ROUTING_KEY: email.send.alert
+
+  symbol-subscription-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      ENVIRONMENT: production
+      PORT: 8005
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex_subscriptions?authSource=admin
+
+  api-gateway:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 3001
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      # Without this the gateway falls back to http://localhost:3000 and the
+      # browser blocks every call from the real domain. An EMPTY value is worse
+      # than unset — the code does CORS_ORIGINS.split(','), so '' becomes ['']
+      # and nothing is allowed — hence `:?` rather than a default.
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
+
+  user-service:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 3010
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/tradex-users?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+
+  ws-gateway-1:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 3002
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
+
+  ws-gateway-2:
+    <<: *restart-policy
+    logging: *default-logging
+    ports: !override []
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      PORT: 3003
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
+
+  # ---------------------------------------------------------------------------
+  # Public edge. nginx is the only thing that should face the internet.
+  # ---------------------------------------------------------------------------
+  nginx:
+    <<: *restart-policy
+    logging: *default-logging
+    depends_on:
+      ws-gateway-1:
+        condition: service_healthy
+      ws-gateway-2:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+      # nginx.conf now has `upstream web_app { server web:3000; }`, and nginx
+      # resolves upstream names when it loads its config. Without this it dies
+      # on start with "host not found in upstream".
+      web:
+        condition: service_healthy
+
+  # Next.js frontend. Not present in the dev compose file — it is normally run
+  # with `npm run dev` locally. nginx proxies it at `location /`, so the only
+  # published port here is a loopback one for debugging from the server itself.
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      # NEXT_PUBLIC_* is inlined into the browser bundle at BUILD time — it is
+      # not read at runtime. Passing them as `environment` does nothing; they
+      # have to be build args. `:?` aborts the build instead of shipping a
+      # bundle that silently falls back to localhost and breaks on the domain.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?set NEXT_PUBLIC_API_URL in .env}
+        NEXT_PUBLIC_PRICE_WS_URL: ${NEXT_PUBLIC_PRICE_WS_URL:?set NEXT_PUBLIC_PRICE_WS_URL in .env}
+        NEXT_PUBLIC_ALERT_WS_URL: ${NEXT_PUBLIC_ALERT_WS_URL:?set NEXT_PUBLIC_ALERT_WS_URL in .env}
+        NEXT_PUBLIC_SENTIMENT_WS_URL: ${NEXT_PUBLIC_SENTIMENT_WS_URL:?set NEXT_PUBLIC_SENTIMENT_WS_URL in .env}
+    container_name: tradex-web
+    <<: *restart-policy
+    logging: *default-logging
+    ports:
+      # Loopback only. Users arrive via nginx :80 behind Caddy :443; binding
+      # 0.0.0.0 here would let anyone reach http://SERVER_IP:3000 over plain
+      # HTTP, bypassing TLS.
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Server-side only: the browser never sees these.
+      CHAT_AGENT_SERVICE_URL: http://chat-agent-service:8006
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - tradex-network

@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push to the same PR cancels the in-flight run rather than queueing behind it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Python services
+  #
+  # Only hermetic tests run here: no MongoDB, no RabbitMQ, no API keys, no model
+  # downloads. Suites that need live infrastructure are excluded by path rather
+  # than skipped silently, so it stays obvious what is and is not covered.
+  # ---------------------------------------------------------------------------
+  prediction-service:
+    name: prediction-service (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/prediction-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install numpy pydantic pydantic-settings
+
+      - name: Lint
+        # Scoped to the files under test. The rest of the service predates this
+        # workflow and carries pre-existing findings; cleaning those up is its
+        # own change, not something to bundle into introducing CI.
+        run: ruff check app/ml/evaluate.py app/ml/indicators.py tests/test_indicators.py
+
+      - name: Test
+        run: pytest tests/test_indicators.py -v
+
+  chat-agent-service:
+    name: chat-agent-service (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/chat-agent-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check app scripts tests
+
+      - name: Test
+        # Uses embedded Qdrant and a stub embedder -- no container, no API key.
+        run: pytest tests -v
+
+  sentiment-service:
+    name: sentiment-service (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/sentiment-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install pydantic pydantic-settings httpx motor
+
+      - name: Lint
+        run: ruff check app/ml eval training tests/test_local_backend.py
+
+      - name: Test
+        # test_main.py needs a live MongoDB and RabbitMQ, so it is excluded.
+        # The ML-backed tests self-skip when torch is not installed.
+        run: pytest tests/test_local_backend.py -v
+
+  # ---------------------------------------------------------------------------
+  # Node services
+  # ---------------------------------------------------------------------------
+  user-service:
+    name: user-service (eslint + jest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        # The repo is an npm workspace, so install from the root.
+        run: npm ci
+
+      - name: Lint
+        # Reports but does not gate. Unlike the Python jobs, this change adds no
+        # TypeScript of its own to scope the linter to, and the existing source
+        # carries ~490 findings - mostly no-unsafe-* from untyped Mongoose
+        # returns. Typing that is a real piece of work and its own change; until
+        # then the findings stay visible in the log rather than silently
+        # unlinted. Drop continue-on-error once they are cleared.
+        #
+        # The package script passes --fix, which mutates files. CI must report
+        # rather than rewrite, so eslint is invoked directly.
+        continue-on-error: true
+        working-directory: services/user-service
+        run: npx eslint "{src,apps,libs,test}/**/*.ts" --max-warnings=0
+
+      - name: Test
+        working-directory: services/user-service
+        run: npx jest --passWithNoTests

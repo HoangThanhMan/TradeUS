@@ -1,0 +1,6 @@
+# Dependencies for EMBEDDING_BACKEND=local.
+# Not needed when embedding through the Gemini API.
+-r requirements.txt
+
+torch>=2.1.0
+transformers>=4.36.0
